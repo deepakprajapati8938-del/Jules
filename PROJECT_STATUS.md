@@ -1,6 +1,7 @@
 # NEET Prep (Jules) — Project Status
 
 *This file is automatically maintained per Rule 1 of AGENTS.md. It reflects the single source of truth for the project state based on real repo files and database state.*
+*Git Remote:* `https://github.com/deepakprajapati8938-del/Jules.git` (main branch synced)
 
 ---
 
