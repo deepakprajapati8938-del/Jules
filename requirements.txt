@@ -1,0 +1,5 @@
+pymupdf4llm
+google-genai
+supabase
+python-dotenv
+groq

@@ -1,0 +1,42 @@
+[
+  {
+    "question": "What is the structure of a nucleotide and how are two nucleotides linked to form a dinucleotide?",
+    "expect_fallback": false,
+    "notes": "Core content in 5.1 — should retrieve from the DNA structure section"
+  },
+  {
+    "question": "What experiment did Griffith conduct and what did he conclude about the transforming principle?",
+    "expect_fallback": false,
+    "notes": "Section 5.2 — Griffith's experiment with Streptococcus pneumoniae"
+  },
+  {
+    "question": "What is the Meselson-Stahl experiment and what did it prove about DNA replication?",
+    "expect_fallback": false,
+    "notes": "Section 5.4 — experimental proof of semi-conservative replication"
+  },
+  {
+    "question": "What are the differences between prokaryotic and eukaryotic transcription?",
+    "expect_fallback": false,
+    "notes": "Section 5.5 — transcription unit, should be covered in the chapter"
+  },
+  {
+    "question": "What is DNA fingerprinting and what polymorphism does it exploit?",
+    "expect_fallback": false,
+    "notes": "Section 5.10 — should be directly retrievable"
+  },
+  {
+    "question": "What is the speed of light in a vacuum?",
+    "expect_fallback": true,
+    "notes": "Physics constant — clearly out of scope for Biology Chapter 5"
+  },
+  {
+    "question": "Who won the first FIFA World Cup and in which year?",
+    "expect_fallback": true,
+    "notes": "Sports history — completely out of scope, should trigger fallback"
+  },
+  {
+    "question": "What is the capital of Australia?",
+    "expect_fallback": true,
+    "notes": "Geography — out of scope, should trigger fallback"
+  }
+]
