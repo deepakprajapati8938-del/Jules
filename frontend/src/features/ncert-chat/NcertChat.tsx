@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2 } from 'lucide-react';
+import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../../core/api-client';
 import type { ChatResponse } from '../../core/api-client';
@@ -49,6 +49,7 @@ export default function NcertChat() {
   const [graphMode, setGraphMode] = useState(false);
   const [attachment, setAttachment] = useState<{ data: string, type: string, name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -473,8 +474,24 @@ export default function NcertChat() {
               <BarChart2 className="w-[18px] h-[18px]" />
             </button>
             <button 
+              onClick={() => cameraInputRef.current?.click()}
+              title="Take Photo"
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
+            >
+              <Camera className="w-[18px] h-[18px]" />
+            </button>
+            <input 
+              type="file" 
+              ref={cameraInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept="image/*"
+              capture="environment"
+            />
+            
+            <button 
               onClick={() => fileInputRef.current?.click()}
-              title="Attach Image or PDF"
+              title="Attach File"
               className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
             >
               <Paperclip className="w-[18px] h-[18px]" />

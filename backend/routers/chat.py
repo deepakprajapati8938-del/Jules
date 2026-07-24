@@ -50,6 +50,14 @@ def get_sessions(sb: Client = Depends(get_supabase)):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str, sb: Client = Depends(get_supabase)):
+    try:
+        sb.table("chat_sessions").delete().eq("id", session_id).execute()
+        return {"status": "deleted"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
 @router.post("", response_model=ChatResponse)
 def chat(req: ChatRequest, sb: Client = Depends(get_supabase)):
     session_id = req.session_id

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { X, Plus, Clock } from 'lucide-react';
+import { X, Plus, Clock, Trash2 } from 'lucide-react';
 import { apiClient } from '../core/api-client';
 import type { ChatSession } from '../core/api-client';
 
@@ -36,6 +36,24 @@ export default function HistorySidebar({ chatType, isOpen, onClose }: HistorySid
   const handleNewChat = () => {
     navigate(isPersonal ? '/personal' : '/chat');
     onClose();
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this chat history?")) return;
+    
+    try {
+      await apiClient.chat.deleteSession(id);
+      setSessions(prev => prev.filter(s => s.id !== id));
+      if (id === sessionId) {
+        navigate(isPersonal ? '/personal' : '/chat');
+        onClose();
+      }
+    } catch (err) {
+      console.error("Failed to delete session", err);
+      alert("Failed to delete session");
+    }
   };
 
   // Group by date logic
@@ -125,14 +143,21 @@ export default function HistorySidebar({ chatType, isOpen, onClose }: HistorySid
                       to={`/${isPersonal ? 'personal' : 'chat'}/${session.id}`}
                       onClick={onClose}
                       className={({ isActive }) => 
-                        `block px-3 py-2.5 rounded-lg text-sm transition-all duration-200 line-clamp-2 leading-snug border ${
+                        `group flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200 border ${
                           (isActive || session.id === sessionId)
                             ? `${activeBg} text-foreground shadow-glass-inset font-medium` 
                             : 'border-transparent text-secondary hover:text-foreground hover:bg-surface-hover'
                         }`
                       }
                     >
-                      {session.title}
+                      <span className="truncate pr-2 leading-snug">{session.title}</span>
+                      <button
+                        onClick={(e) => handleDelete(e, session.id)}
+                        className="p-1.5 -mr-1.5 text-muted hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all shrink-0 opacity-40 hover:opacity-100"
+                        title="Delete chat"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </NavLink>
                   ))}
                 </div>

@@ -1,11 +1,11 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from './app-shell/AppShell';
 
 // Eagerly loaded components for fast initial load
+import SplashScreen from './components/SplashScreen';
 import NcertChat from './features/ncert-chat/NcertChat';
 import PersonalChat from './features/personal-chat/PersonalChat';
-import DailyAffirmation from './daily-affirmation/DailyAffirmation';
 import ReflectionJournal from './features/reflection-journal/ReflectionJournal';
 import Settings from './features/settings/Settings';
 import SavedItems from './features/saved-items/SavedItems';
@@ -27,14 +27,28 @@ const LoadingScreen = () => (
 );
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const hasSeenSplash = sessionStorage.getItem('jules_has_seen_splash');
+    if (hasSeenSplash) {
+      setShowSplash(false);
+    }
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('jules_has_seen_splash', 'true');
+    setShowSplash(false);
+  };
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/affirmation" element={<DailyAffirmation />} />
-        
-        {/* All main app routes are wrapped in the AppShell */}
-        <Route path="/" element={<AppShell />}>
-          <Route index element={<Navigate to="/home" replace />} />
+    <>
+      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+      <Router>
+        <Routes>
+          {/* All main app routes are wrapped in the AppShell */}
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<Navigate to="/home" replace />} />
           <Route path="home" element={<Home />} />
           <Route path="chat" element={<NcertChat />} />
           <Route path="chat/:sessionId" element={<NcertChat />} />
@@ -52,11 +66,11 @@ function App() {
           <Route path="concept-map" element={<Suspense fallback={<LoadingScreen />}><ConceptMap /></Suspense>} />
           <Route path="admin/hotspots" element={<Suspense fallback={<LoadingScreen />}><HotspotReview /></Suspense>} />
           
-          {/* Fallback */}
           <Route path="*" element={<div className="p-4">Under construction</div>} />
         </Route>
       </Routes>
     </Router>
+    </>
   );
 }
 

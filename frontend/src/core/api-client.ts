@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
@@ -205,6 +205,7 @@ export const apiClient = {
     
     getNcertSessions: () => fetchApi<ChatSession[]>('/chat/sessions'),
     getPersonalSessions: () => fetchApi<ChatSession[]>('/personal-chat/sessions'),
+    deleteSession: (session_id: string) => fetchApi<{ status: string }>(`/chat/sessions/${session_id}`, { method: 'DELETE' }),
   },
   home: {
     getData: () => fetchApi<HomeData>('/home/data'),
