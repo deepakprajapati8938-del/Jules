@@ -21,7 +21,6 @@ import {
   Layers,
   MousePointerClick,
   RefreshCw,
-  Award,
   Zap,
   TrendingUp,
   Pencil,
