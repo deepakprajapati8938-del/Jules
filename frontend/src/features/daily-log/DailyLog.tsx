@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CalendarDays, Clock, BookOpen, PenTool, CheckCircle2, History } from 'lucide-react';
 import CustomSelect from '../../components/CustomSelect';
 import { apiClient, type StudySession } from '../../core/api-client';
+import { NEET_SYLLABUS } from '../../core/syllabus';
 
 export default function DailyLog() {
   const [subject, setSubject] = useState('');
@@ -96,7 +97,7 @@ export default function DailyLog() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto w-full">
+    <div className="h-full overflow-y-auto pb-24 scrollbar-hide p-4 md:p-8 max-w-2xl mx-auto w-full">
       <div className="flex items-center gap-3 mb-8">
         <CalendarDays className="w-8 h-8 text-foreground" />
         <h2 className="text-2xl font-semibold text-foreground">Daily Study Log</h2>
@@ -120,13 +121,11 @@ export default function DailyLog() {
                 { value: 'Biology', label: 'Biology' }
               ]}
             />
-            <input 
-              type="text"
+            <CustomSelect
               value={chapter}
-              onChange={e => setChapter(e.target.value)}
-              placeholder="Chapter name..."
-              className="glass-input px-4 py-3 text-sm"
-              required
+              onChange={setChapter}
+              placeholder="Select Chapter..."
+              options={subject && NEET_SYLLABUS[subject] ? NEET_SYLLABUS[subject].map(ch => ({ value: ch, label: ch })) : []}
             />
           </div>
         </div>

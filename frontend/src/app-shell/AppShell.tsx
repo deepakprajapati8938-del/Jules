@@ -13,9 +13,13 @@ import {
   Settings,
   PenTool,
   NotebookPen,
+  FileText,
+  ListChecks,
+  BookOpen,
 } from 'lucide-react';
 import { apiClient } from '../core/api-client';
 import StreakResetRitual from '../features/streak/StreakResetRitual';
+import QuickLookup from '../components/QuickLookup';
 
 const NAV_ITEMS = [
   { to: "/chat", label: "NCERT Chat", icon: MessageSquareText },
@@ -24,9 +28,12 @@ const NAV_ITEMS = [
   { to: "/daily-log", label: "Daily Log", icon: CalendarDays },
   { to: "/tests", label: "Tests", icon: PenTool },
   { to: "/flashcards", label: "Flashcards", icon: Layers },
+  { to: "/cheatsheet", label: "Cheat Sheet", icon: FileText },
   { to: "/journal", label: "Reflection Journal", icon: NotebookPen },
   { to: "/saves", label: "Saved Items", icon: BookMarked },
   { to: "/concept-map", label: "Concept Map", icon: Map },
+  { to: "/syllabus", label: "Syllabus Tracker", icon: ListChecks },
+  { to: "/guide", label: "User Guide", icon: BookOpen },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -84,6 +91,7 @@ export function AppShell() {
         </div>
         
         <div className="flex items-center gap-3">
+          <QuickLookup />
           {streak !== null && (
             <div className="text-sm font-medium flex items-center gap-1.5 bg-accent-tint text-accent px-2.5 py-1 rounded-lg border border-accent/20">
               🔥 {streak}

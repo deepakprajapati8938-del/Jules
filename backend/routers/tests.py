@@ -12,6 +12,10 @@ from backend.deps import get_supabase
 
 router = APIRouter(prefix="/tests", tags=["tests"])
 
+import base64
+import json
+from fastapi import UploadFile, File
+
 ValidTestType = Literal["chapter", "subject", "custom", "mock"]
 ValidMistakeType = Literal["silly_mistake", "concept_gap", "didnt_know"]
 
@@ -143,6 +147,175 @@ def generate_test(req: GenerateTestRequest, sb: Client = Depends(get_supabase)):
         attempt_id=attempt_id,
         test_type=req.test_type,
         duration_mins=req.duration_mins,
+        questions=questions_out,
+    )
+
+@router.post("/generate-from-pdf", response_model=TestOut)
+async def generate_test_from_pdf(
+    file: UploadFile = File(...),
+    answer_key_file: Optional[UploadFile] = File(None),
+    sb: Client = Depends(get_supabase)
+):
+    """Generate a test by extracting questions from an uploaded PDF using Gemini Vision."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    
+    file_bytes = await file.read()
+    # Increased limit to 20MB for full mock tests
+    if len(file_bytes) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 20MB limit.")
+        
+    import fitz
+    import concurrent.futures
+    from src.llm_wrapper import call_llm
+    
+    # Split PDF into chunks of 4 pages
+    chunk_size = 4
+    b64_chunks = []
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        for i in range(0, len(doc), chunk_size):
+            chunk_doc = fitz.open()
+            chunk_doc.insert_pdf(doc, from_page=i, to_page=min(i + chunk_size - 1, len(doc) - 1))
+            chunk_bytes = chunk_doc.write()
+            b64_chunks.append(base64.b64encode(chunk_bytes).decode("utf-8"))
+            chunk_doc.close()
+        doc.close()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process PDF file: {e}")
+
+    answer_key_dict_str = ""
+    if answer_key_file and answer_key_file.filename and answer_key_file.filename.lower().endswith(".pdf"):
+        ak_bytes = await answer_key_file.read()
+        if len(ak_bytes) <= 5 * 1024 * 1024:
+            ak_b64 = base64.b64encode(ak_bytes).decode("utf-8")
+            ak_prompt = (
+                "Extract the answer key from this document. "
+                "Return the output STRICTLY as a JSON dictionary where keys are question numbers (as strings) "
+                'and values are the correct option ("A", "B", "C", or "D"). '
+                "Do not include any explanation or markdown outside the JSON."
+            )
+            try:
+                ak_res = call_llm(
+                    system_prompt="You are an expert answer key extractor.",
+                    user_prompt=ak_prompt,
+                    attachment_data=ak_b64,
+                    attachment_mime_type="application/pdf"
+                )
+                ak_clean = ak_res.strip()
+                if ak_clean.startswith("```json"): ak_clean = ak_clean[7:]
+                if ak_clean.endswith("```"): ak_clean = ak_clean[:-3]
+                # Validate it's parseable
+                json.loads(ak_clean.strip())
+                answer_key_dict_str = f" Use this provided answer key to assign the correct answer to each extracted question: {ak_clean.strip()}."
+            except Exception as e:
+                print(f"Failed to process answer key: {e}")
+
+    system_prompt = (
+        "You are an expert test extractor. The user has provided a chunk of a PDF test paper. "
+        "Your task is to extract ONLY the multiple choice questions that are visibly present in this specific chunk. "
+        "CRITICAL INSTRUCTION: DO NOT generate, make up, or hallucinate any additional questions. Stop extracting exactly when you reach the end of the provided pages. "
+        "If there is an answer key provided in the document, map the correct answers to the questions. "
+        "If no answer key is found, you must SOLVE the questions to determine the correct answers. "
+        f"{answer_key_dict_str} "
+        "Return the output STRICTLY as a JSON list of objects, without any markdown formatting or explanation outside the JSON. "
+        "Each object must have exactly these keys: "
+        '"question_text" (string), "option_a" (string), "option_b" (string), "option_c" (string), "option_d" (string), '
+        '"correct_ans" (must be strictly "A", "B", "C", or "D"). '
+        "Do not include question numbers in question_text."
+    )
+    
+    def process_chunk(b64_data):
+        try:
+            response_text = call_llm(
+                system_prompt=system_prompt,
+                user_prompt="Extract questions and answers to JSON.",
+                attachment_data=b64_data,
+                attachment_mime_type="application/pdf"
+            )
+            cleaned = response_text.strip()
+            if cleaned.startswith("```json"): cleaned = cleaned[7:]
+            if cleaned.endswith("```"): cleaned = cleaned[:-3]
+            return json.loads(cleaned.strip())
+        except Exception as e:
+            print(f"Chunk processing failed: {e}")
+            return []
+
+    # Run chunks concurrently
+    extracted_qas = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        results = executor.map(process_chunk, b64_chunks)
+        for res in results:
+            if isinstance(res, list):
+                extracted_qas.extend(res)
+                
+    if not extracted_qas:
+        raise HTTPException(status_code=400, detail="Could not extract any questions from the PDF.")
+
+    # Deduplicate based on question_text to prevent LLM overlap or repetition
+    seen_texts = set()
+    unique_qas = []
+    for q in extracted_qas:
+        q_text = q.get("question_text", "").strip().lower()
+        if q_text and q_text not in seen_texts:
+            seen_texts.add(q_text)
+            unique_qas.append(q)
+            
+    extracted_qas = unique_qas
+
+    # Cap at 220
+    if len(extracted_qas) > 220:
+        extracted_qas = extracted_qas[:220]
+        
+    duration_mins = max(10, int(len(extracted_qas) * 1.5))
+        
+    test_res = sb.table("tests").insert({
+        "test_type": "custom",
+        "subject": "PDF Upload",
+        "chapter_name": file.filename[:50],
+        "total_marks": len(extracted_qas) * 4,
+        "duration_mins": duration_mins,
+    }).execute()
+    test_id = test_res.data[0]["id"]
+    
+    questions_out = []
+    for i, q in enumerate(extracted_qas):
+        q_insert = {
+            "test_id": test_id,
+            "chunk_id": None,
+            "question_text": str(q.get("question_text", "Missing question text"))[:1000],
+            "option_a": str(q.get("option_a", "N/A"))[:500],
+            "option_b": str(q.get("option_b", "N/A"))[:500],
+            "option_c": str(q.get("option_c", "N/A"))[:500],
+            "option_d": str(q.get("option_d", "N/A"))[:500],
+            "correct_ans": q.get("correct_ans", "A") if q.get("correct_ans") in ["A","B","C","D"] else "A",
+            "subject": "Unknown",
+            "chapter_name": file.filename[:50],
+            "source_type": "PYQ",
+            "display_order": i,
+        }
+        q_res = sb.table("test_questions").insert(q_insert).execute()
+        q_data = q_res.data[0]
+        questions_out.append(QuestionOut(
+            id=q_data["id"],
+            question_text=q_data["question_text"],
+            option_a=q_data["option_a"],
+            option_b=q_data["option_b"],
+            option_c=q_data["option_c"],
+            option_d=q_data["option_d"],
+            subject=q_data["subject"],
+            chapter_name=q_data.get("chapter_name"),
+            source_type=q_data["source_type"],
+        ))
+        
+    attempt_res = sb.table("test_attempts").insert({"test_id": test_id}).execute()
+    attempt_id = attempt_res.data[0]["id"]
+    
+    return TestOut(
+        test_id=test_id,
+        attempt_id=attempt_id,
+        test_type="custom",
+        duration_mins=duration_mins,
         questions=questions_out,
     )
 

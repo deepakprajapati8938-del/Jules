@@ -126,7 +126,8 @@ def answer(
     threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
     attachment_data: str | None = None,
     attachment_mime_type: str | None = None,
-    require_graph: bool = False
+    require_graph: bool = False,
+    quick_lookup: bool = False
 ) -> AnswerResult:
     """
     Full RAG cycle: retrieve chunks → build prompt → generate answer.
@@ -147,7 +148,8 @@ def answer(
         chunks, 
         attachment_data=attachment_data, 
         attachment_mime_type=attachment_mime_type,
-        is_interactive=is_interactive
+        is_interactive=is_interactive,
+        quick_lookup=quick_lookup
     )
     
     answer_text = raw_answer
@@ -239,14 +241,25 @@ def _generate_answer(
     chunks: list[RetrievedChunk],
     attachment_data: str | None = None,
     attachment_mime_type: str | None = None,
-    is_interactive: bool = False
+    is_interactive: bool = False,
+    quick_lookup: bool = False
 ) -> str:
     """
     Build the grounding prompt and call the LLM via call_llm() to generate
     an answer. Grounding policy: answer from context if present, else fall
     back to general knowledge with FALLBACK_TAG prefix.
     """
-    system_prompt = f"""You are a precise study assistant for NEET UG exam preparation.
+    if quick_lookup:
+        system_prompt = f"""You are a direct fact and formula lookup tool for NEET UG.
+You are given excerpts from an NCERT textbook chapter.
+Rule 1: Answer directly in 1-2 lines based ONLY on the context. No conversational filler. Just the fact or formula.
+Rule 2: If the answer is NOT in the context, you MUST begin your entire response with this exact tag:
+{FALLBACK_TAG}
+Then provide the answer from general knowledge in 1-2 lines.
+Rule 3: You MUST respond in English or Hinglish (Hindi written in English alphabet). NEVER use pure Hindi / Devanagari script.
+"""
+    else:
+        system_prompt = f"""You are a precise study assistant for NEET UG exam preparation.
 You are given excerpts from an NCERT textbook chapter. Use them to answer the student's question.
 
 Rules you MUST follow:
@@ -264,6 +277,7 @@ Rules you MUST follow:
 3. Never blend NCERT content and general knowledge into one answer without the tag.
    If ANY part of your answer goes beyond the context, the tag must appear.
 4. Be concise and exam-focused.
+5. LANGUAGE RULE: You MUST respond in English or Hinglish (Hindi written in English alphabet). NEVER use pure Hindi or the Devanagari script (e.g. never write 'गैल्वेनोमीटर').
 """
 
     if is_interactive:

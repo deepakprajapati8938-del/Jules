@@ -24,8 +24,33 @@ CHAPTER_MAP = {
             16: "EnvironmentalIssues"
         }
     },
-    "Physics": { "11": {}, "12": {} }, # Fallback will just use "ChapterX"
-    "Chemistry": { "11": {}, "12": {} }
+    "Physics": {
+        "11": {
+            1: "UnitsAndMeasurements", 2: "MotionInAStraightLine", 3: "MotionInAPlane", 4: "LawsOfMotion",
+            5: "WorkEnergyAndPower", 6: "SystemOfParticlesAndRotationalMotion", 7: "Gravitation",
+            8: "MechanicalPropertiesOfSolids", 9: "MechanicalPropertiesOfFluids", 10: "ThermalPropertiesOfMatter",
+            11: "Thermodynamics", 12: "KineticTheory", 13: "Oscillations", 14: "Waves"
+        },
+        "12": {
+            1: "ElectricChargesAndFields", 2: "ElectrostaticPotentialAndCapacitance", 3: "CurrentElectricity",
+            4: "MovingChargesAndMagnetism", 5: "MagnetismAndMatter", 6: "ElectromagneticInduction",
+            7: "AlternatingCurrent", 8: "ElectromagneticWaves", 9: "RayOpticsAndOpticalInstruments",
+            10: "WaveOptics", 11: "DualNatureOfRadiationAndMatter", 12: "Atoms", 13: "Nuclei",
+            14: "SemiconductorElectronics"
+        }
+    },
+    "Chemistry": {
+        "11": {
+            1: "SomeBasicConceptsOfChemistry", 2: "StructureOfAtom", 3: "ClassificationOfElementsAndPeriodicity",
+            4: "ChemicalBondingAndMolecularStructure", 5: "Thermodynamics", 6: "Equilibrium",
+            7: "RedoxReactions", 8: "OrganicChemistrySomeBasicPrinciples", 9: "Hydrocarbons"
+        },
+        "12": {
+            1: "Solutions", 2: "Electrochemistry", 3: "ChemicalKinetics", 4: "TheDAndFBlockElements",
+            5: "CoordinationCompounds", 6: "HaloalkanesAndHaloarenes", 7: "AlcoholsPhenolsAndEthers",
+            8: "AldehydesKetonesAndCarboxylicAcids", 9: "Amines", 10: "Biomolecules"
+        }
+    }
 }
 
 def fix_ncert():

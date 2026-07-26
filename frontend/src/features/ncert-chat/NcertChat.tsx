@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiClient } from '../../core/api-client';
 import type { ChatResponse } from '../../core/api-client';
 import ReactMarkdown from 'react-markdown';
@@ -34,12 +34,22 @@ const preprocessMath = (text: string) => {
 export default function NcertChat() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Handle prefill text from Text-Select-to-Ask
+  useEffect(() => {
+    if (location.state?.prefill) {
+      setInput(location.state.prefill);
+      // Clean up the state so it doesn't prefill again on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -232,7 +242,7 @@ export default function NcertChat() {
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 pb-32"
+        className="h-full overflow-y-auto scrollbar-hide p-4 md:p-8 space-y-8 pb-32"
       >
         {messages.length === 0 && !isInitializing && (
           <div className="h-full flex flex-col items-center justify-center space-y-6">
@@ -402,21 +412,21 @@ export default function NcertChat() {
       <div className="p-4 md:p-6 shrink-0 absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-12 z-20 pointer-events-none">
         <div className="max-w-3xl mx-auto bg-surface-strong rounded-[2rem] p-2 flex items-end gap-2 transition-all focus-within:border-accent/40 focus-within:shadow-glow-accent border border-border-glass shadow-glass-sm pointer-events-auto relative">
           
-          <div className="flex items-center gap-0.5 shrink-0 mb-1 ml-1">
+          <div className="flex items-center shrink-0 mb-1 ml-0.5 md:ml-1">
             <button 
               onClick={() => setIsSidebarOpen(true)}
               title="Chat History"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-emerald-400 hover:bg-emerald-400/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
             >
-              <Clock className="w-[18px] h-[18px]" />
+              <Clock className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             
             <button 
               onClick={handleNewTopic}
               title="Start New Topic"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-emerald-400 hover:bg-emerald-400/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
             >
-              <Sparkles className="w-[18px] h-[18px]" />
+              <Sparkles className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
           </div>
 
@@ -465,20 +475,20 @@ export default function NcertChat() {
             />
           </div>
           
-          <div className="flex items-center gap-0.5 shrink-0 mb-1 mr-1">
+          <div className="flex items-center shrink-0 mb-1 mr-0.5 md:mr-1">
             <button 
               onClick={() => setGraphMode(!graphMode)}
               title="Toggle Graph Mode"
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all focus:outline-none ${graphMode ? 'text-accent bg-accent/20 shadow-[0_0_10px_rgba(52,211,153,0.3)]' : 'text-muted hover:text-accent hover:bg-accent/10'}`}
+              className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all focus:outline-none ${graphMode ? 'text-accent bg-accent/20 shadow-[0_0_10px_rgba(255,138,61,0.3)]' : 'text-muted hover:text-accent hover:bg-accent/10'}`}
             >
-              <BarChart2 className="w-[18px] h-[18px]" />
+              <BarChart2 className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             <button 
               onClick={() => cameraInputRef.current?.click()}
               title="Take Photo"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
             >
-              <Camera className="w-[18px] h-[18px]" />
+              <Camera className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             <input 
               type="file" 
@@ -492,16 +502,16 @@ export default function NcertChat() {
             <button 
               onClick={() => fileInputRef.current?.click()}
               title="Attach File"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
             >
-              <Paperclip className="w-[18px] h-[18px]" />
+              <Paperclip className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             <button 
               onClick={handleSend}
               disabled={(!input.trim() && !attachment) || isSending}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all bg-accent/10 text-accent hover:bg-accent hover:text-white disabled:opacity-30 disabled:bg-transparent disabled:text-muted focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all bg-accent/10 text-accent hover:bg-accent hover:text-white disabled:opacity-30 disabled:bg-transparent disabled:text-muted focus:outline-none ml-0.5 md:ml-1"
             >
-              <Send className="w-[18px] h-[18px] -ml-0.5" />
+              <Send className="w-4 h-4 md:w-[18px] md:h-[18px] -ml-0.5" />
             </button>
           </div>
         </div>

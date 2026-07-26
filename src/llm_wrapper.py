@@ -15,28 +15,33 @@ from src.config import GEMINI_TEXT_MODEL, get_all_gemini_api_keys
 
 logger = logging.getLogger(__name__)
 
+import threading
+
 # ── Lazy client pool (same rotation logic as embedder) ────────────────────────
 _clients: list = []
 _client_index: int = 0
+_client_lock = threading.Lock()
 
 
 def _get_client():
     global _clients
-    if not _clients:
-        from google import genai
-        for key in get_all_gemini_api_keys():
-            _clients.append(genai.Client(api_key=key))
-    return _clients[_client_index % len(_clients)]
+    with _client_lock:
+        if not _clients:
+            from google import genai
+            for key in get_all_gemini_api_keys():
+                _clients.append(genai.Client(api_key=key))
+        return _clients[_client_index % len(_clients)]
 
 
 def _rotate_client() -> None:
     global _client_index
-    _client_index = (_client_index + 1) % max(len(_clients), 1)
+    with _client_lock:
+        _client_index = (_client_index + 1) % max(len(_clients), 1)
 
 
 def _is_rate_limit(exc: Exception) -> bool:
     msg = str(exc).lower()
-    return "429" in msg or "resource_exhausted" in msg or "quota" in msg
+    return "429" in msg or "resource_exhausted" in msg or "quota" in msg or "403" in msg or "permission_denied" in msg
 
 
 # ── Public interface ──────────────────────────────────────────────────────────
@@ -71,6 +76,16 @@ def call_llm(
         RuntimeError: If all retries are exhausted.
         Exception:    Any non-rate-limit error is re-raised immediately.
     """
+def _call_single_model(
+    model_name: str,
+    system_prompt: str,
+    user_prompt: str,
+    context: str | None = None,
+    max_retries: int = 5,
+    base_delay: float = 2.0,
+    attachment_data: str | None = None,
+    attachment_mime_type: str | None = None,
+) -> str:
     import base64
     from google.genai import types as _types
 
@@ -109,14 +124,14 @@ def call_llm(
     _get_client()
     delay = base_delay
 
-    final_model = model_name if model_name else GEMINI_TEXT_MODEL
+    final_model = model_name
 
     # Auto-route to Gemini if there's an attachment (Groq doesn't support multimodal)
     if attachment_data:
         final_model = "gemini-flash-latest"
 
     # Route to Groq if requested
-    if final_model.startswith(("llama-", "mixtral-", "gemma-", "qwen", "moonshot", "openai/")):
+    if final_model.startswith(("llama-", "mixtral-", "gemma-", "qwen", "openai/")):
         from src.config import get_groq_api_key
         from groq import Groq
         
@@ -138,10 +153,13 @@ def call_llm(
                     delay *= 2
                 else:
                     raise
-        raise RuntimeError(f"call_llm() failed after {max_retries} retries on Groq.")
+        raise RuntimeError(f"_call_single_model() failed after {max_retries} retries on Groq.")
 
     # Otherwise route to Gemini
-    for attempt in range(1, max_retries + 1):
+    _get_client() # ensure clients are loaded
+    gemini_max_retries = max(max_retries, len(_clients))
+    
+    for attempt in range(1, gemini_max_retries + 1):
         try:
             client = _get_client()
             response = client.models.generate_content(
@@ -152,11 +170,11 @@ def call_llm(
             return response.text.strip()
 
         except Exception as exc:
-            if _is_rate_limit(exc) and attempt < max_retries:
+            if _is_rate_limit(exc) and attempt < gemini_max_retries:
                 _rotate_client()
                 if attempt % len(_clients) == 0:
                     logger.warning(
-                        f"[llm_wrapper] All keys rate-limited (attempt {attempt}/{max_retries}). "
+                        f"[llm_wrapper] All keys rate-limited (attempt {attempt}/{gemini_max_retries}). "
                         f"Sleeping {delay:.1f}s …"
                     )
                     time.sleep(delay)
@@ -164,12 +182,53 @@ def call_llm(
                 else:
                     logger.warning(
                         f"[llm_wrapper] Rate-limited — rotated to next key "
-                        f"(attempt {attempt}/{max_retries})."
+                        f"(attempt {attempt}/{gemini_max_retries})."
                     )
             else:
                 raise
 
     raise RuntimeError(
-        f"call_llm() failed after {max_retries} retries. "
+        f"_call_single_model() failed after {gemini_max_retries} retries. "
         "Check your API quota or increase max_retries."
     )
+
+
+def call_llm(
+    system_prompt: str,
+    user_prompt: str,
+    context: str | None = None,
+    *,
+    max_retries: int = 5,
+    base_delay: float = 2.0,
+    model_name: str | None = None,
+    attachment_data: str | None = None,
+    attachment_mime_type: str | None = None,
+) -> str:
+    from src.config import PRO_FALLBACK_CHAIN, TEXT_FALLBACK_CHAIN, GEMINI_PRO_MODEL, GEMINI_TEXT_MODEL
+    
+    # Determine the fallback chain
+    if model_name == GEMINI_PRO_MODEL:
+        chain = PRO_FALLBACK_CHAIN
+    elif model_name:
+        chain = [model_name]
+    else:
+        chain = TEXT_FALLBACK_CHAIN
+        
+    last_error = None
+    for model in chain:
+        try:
+            return _call_single_model(
+                model_name=model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                context=context,
+                max_retries=max_retries,
+                base_delay=base_delay,
+                attachment_data=attachment_data,
+                attachment_mime_type=attachment_mime_type
+            )
+        except Exception as e:
+            logger.warning(f"[llm_wrapper] Model '{model}' failed: {e}. Trying next fallback if available...")
+            last_error = e
+            
+    raise RuntimeError(f"All models in fallback chain failed. Last error: {last_error}")

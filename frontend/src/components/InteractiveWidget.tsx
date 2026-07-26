@@ -14,8 +14,8 @@ export default function InteractiveWidget({ html }: InteractiveWidgetProps) {
     const timeoutId = setTimeout(() => {
       setStatus((prev) => {
         if (prev === 'loading') {
-          console.warn('InteractiveWidget: Timed out waiting for widget-ready signal');
-          return 'error';
+          console.warn('InteractiveWidget: Timed out waiting for widget-ready signal, assuming ready.');
+          return 'ready'; // Assume ready instead of erroring out to avoid hiding a working widget
         }
         return prev;
       });

@@ -143,3 +143,49 @@ def get_history(session_id: str, sb: Client = Depends(get_supabase)):
         return HistoryResponse(messages=msgs)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+class SearchResult(BaseModel):
+    session_id: str
+    content: str
+    created_at: str
+
+@router.get("/search", response_model=list[SearchResult])
+def search_history(query: str, sb: Client = Depends(get_supabase)):
+    try:
+        # We use ilike to do case-insensitive search
+        res = sb.table("ncert_chat_messages")\
+            .select("session_id, content, created_at")\
+            .ilike("content", f"%{query}%")\
+            .order("created_at", desc=True)\
+            .limit(20).execute()
+            
+        results = []
+        for row in (res.data or []):
+            results.append(SearchResult(
+                session_id=str(row["session_id"]),
+                content=row["content"][:200] + ("..." if len(row["content"]) > 200 else ""),
+                created_at=row["created_at"]
+            ))
+        return results
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+class QuickLookupRequest(BaseModel):
+    query: str
+
+class QuickLookupResponse(BaseModel):
+    answer: str
+
+@router.post("/quick-lookup", response_model=QuickLookupResponse)
+def quick_lookup(req: QuickLookupRequest):
+    try:
+        result = answer(
+            req.query,
+            top_k=2,
+            threshold=DEFAULT_SIMILARITY_THRESHOLD,
+            quick_lookup=True
+        )
+        ans = result.answer.replace("[NOT FROM NCERT — GENERAL KNOWLEDGE]", "").strip()
+        return QuickLookupResponse(answer=ans)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))

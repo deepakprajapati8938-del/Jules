@@ -3,3 +3,6 @@ google-genai
 supabase
 python-dotenv
 groq
+fastapi
+uvicorn
+python-multipart

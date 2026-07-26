@@ -13,6 +13,9 @@ export default defineConfig({
         short_name: 'Jules',
         description: 'Jules - Personal NEET UG Study Companion',
         theme_color: '#08090c',
+        background_color: '#08090c',
+        display: 'standalone',
+        start_url: '/',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -25,6 +28,9 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      devOptions: {
+        enabled: true
       },
       workbox: {
         runtimeCaching: [

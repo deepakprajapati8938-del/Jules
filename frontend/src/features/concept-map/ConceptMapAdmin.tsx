@@ -1,23 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Map, RefreshCw, Network, Search, Check, X } from 'lucide-react';
-import ForceGraph2D from 'react-force-graph-2d';
-
-// We'll define a simple types for the data
-interface ConceptNode {
-  id: string;
-  name: string;
-  group: number;
-  val: number;
-  subject: string;
-  chapter: string;
-  is_weak: boolean;
-}
-
-interface ConceptLink {
-  source: string;
-  target: string;
-  label: string;
-}
+import { useState, useEffect } from 'react';
+import { Network, Check, X } from 'lucide-react';
 
 export default function ConceptMapAdmin() {
   const [edges, setEdges] = useState<any[]>([]);

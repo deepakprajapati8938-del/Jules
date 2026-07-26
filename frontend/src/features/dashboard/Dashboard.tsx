@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, CheckCircle2, Flame, HeartHandshake } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, Flame, HeartHandshake, Lightbulb, CalendarDays } from 'lucide-react';
 import { apiClient } from '../../core/api-client';
+import type { FactOut } from '../../core/api-client';
 import { calculateStreak, type StreakData } from '../../utils/streak-calculator';
 import {
   AreaChart,
@@ -35,10 +36,12 @@ export default function Dashboard() {
       { date: 'Sat', minutes: 0 },
       { date: 'Sun', minutes: 0 },
     ],
-    total_study_minutes_7d: 0
+    total_study_minutes_7d: 0,
+    neglected_chapters: [] as string[]
   });
 
   const [streakData, setStreakData] = useState<StreakData | null>(null);
+  const [dailyFact, setDailyFact] = useState<FactOut | null>(null);
 
   useEffect(() => {
     apiClient.dashboard.getStats().then(setStats).catch(console.error);
@@ -57,6 +60,12 @@ export default function Dashboard() {
     apiClient.dailyLog.getHistory().then(history => {
       setStreakData(calculateStreak(history));
     }).catch(console.error);
+
+    apiClient.facts.getRandom(1)
+      .then(res => {
+        if (res && res.length > 0) setDailyFact(res[0]);
+      })
+      .catch(console.error);
   }, []);
 
   const studyData = stats.study_trend;
@@ -70,7 +79,7 @@ export default function Dashboard() {
   ].filter(d => d.value > 0);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto w-full">
+    <div className="h-full overflow-y-auto pb-24 scrollbar-hide p-4 md:p-8 max-w-5xl mx-auto w-full">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <LayoutDashboard className="w-8 h-8 text-foreground" />
@@ -83,6 +92,45 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {dailyFact && (
+        <div className="mb-8 glass rounded-2xl p-5 shadow-glass-sm border-l-4 border-l-amber-400 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Lightbulb className="w-16 h-16 text-amber-400" />
+          </div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-5 h-5 text-amber-400" />
+              <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider">NCERT Daily Byte</h3>
+            </div>
+            <p className="text-foreground/90 font-medium md:text-lg leading-relaxed">
+              "{dailyFact.fact_text}"
+            </p>
+            <div className="mt-3 text-xs text-secondary font-medium">
+              Source: {dailyFact.chapter_name} • {dailyFact.subject}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {stats.neglected_chapters && stats.neglected_chapters.length > 0 && (
+        <div className="mb-6 p-5 glass-strong rounded-2xl border border-secondary/20 shadow-glass-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-up">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-surface-strong border border-border-glass flex items-center justify-center shrink-0">
+              <CalendarDays className="w-5 h-5 text-secondary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground text-sm tracking-tight mb-0.5">Time for a quick review?</h3>
+              <p className="text-sm text-secondary">
+                You haven't touched these in 14+ days: <span className="text-foreground/90 font-medium">{stats.neglected_chapters.join(', ')}</span>
+              </p>
+            </div>
+          </div>
+          <button onClick={() => window.location.hash = '#/tests'} className="btn-secondary px-5 py-2 text-sm shrink-0 whitespace-nowrap">
+            Take a Test
+          </button>
+        </div>
+      )}
 
       {streakData?.isRecoveryMode && (
         <div className="mb-6 p-6 glass-strong rounded-3xl border border-violet/20 shadow-glow-violet bg-gradient-to-r from-violet/5 to-transparent flex flex-col md:flex-row items-center justify-between gap-4">

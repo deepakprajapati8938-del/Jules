@@ -54,7 +54,7 @@ export default function SavedItems() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-4 max-w-4xl mx-auto w-full">
+      <div className="h-full overflow-y-auto pb-24 scrollbar-hide p-4 md:p-8 pt-4 max-w-4xl mx-auto w-full">
         {filteredItems.length === 0 ? (
           <div className="text-center py-20 text-muted">
             <BookMarked className="w-12 h-12 mx-auto mb-3 opacity-30" />

@@ -57,6 +57,12 @@ export interface HistoryMessage {
   created_at: string;
 }
 
+export interface ChatSearchResult {
+  session_id: string;
+  content: string;
+  created_at: string;
+}
+
 export interface HistoryResponse {
   messages: HistoryMessage[];
 }
@@ -82,8 +88,9 @@ export interface StudyTrend {
 
 export interface DashboardStats {
   progress_percentage: number;
-  study_trend: StudyTrend[];
+  study_trend: { date: string; minutes: number }[];
   total_study_minutes_7d: number;
+  neglected_chapters: string[];
 }
 
 export interface Suggestion {
@@ -169,6 +176,14 @@ export interface SavedItem {
   created_at: string;
 }
 
+export interface FactOut {
+  id: number;
+  subject: string;
+  chapter_name: string;
+  fact_text: string;
+  fact_type: string;
+}
+
 export interface StudySession {
   id: number;
   subject: string;
@@ -176,6 +191,20 @@ export interface StudySession {
   time_spent_mins: number;
   notes: string | null;
   created_at: string;
+}
+
+export interface TopicProgress {
+  name: string;
+  is_completed: boolean;
+}
+export interface ChapterProgress {
+  name: string;
+  is_completed: boolean;
+  topics: TopicProgress[];
+}
+export interface SubjectProgress {
+  name: string;
+  chapters: ChapterProgress[];
 }
 
 export const apiClient = {
@@ -202,10 +231,16 @@ export const apiClient = {
       
     getPersonalHistory: (session_id: string) => fetchApi<HistoryResponse>(`/personal-chat/history?session_id=${session_id}`),
     getNcertHistory: (session_id: string) => fetchApi<HistoryResponse>(`/chat/history?session_id=${session_id}`),
+    searchHistory: (query: string) => fetchApi<ChatSearchResult[]>(`/chat/search?query=${encodeURIComponent(query)}`),
     
     getNcertSessions: () => fetchApi<ChatSession[]>('/chat/sessions'),
     getPersonalSessions: () => fetchApi<ChatSession[]>('/personal-chat/sessions'),
     deleteSession: (session_id: string) => fetchApi<{ status: string }>(`/chat/sessions/${session_id}`, { method: 'DELETE' }),
+    
+    quickLookup: (query: string) => fetchApi<{ answer: string }>('/chat/quick-lookup', {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+    }),
   },
   home: {
     getData: () => fetchApi<HomeData>('/home/data'),
@@ -242,6 +277,24 @@ export const apiClient = {
         method: 'POST',
         body: JSON.stringify({ test_type, num_questions, subject, chapter_name }),
       }),
+    generateFromPdf: async (file: File, answerKeyFile?: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (answerKeyFile) {
+        formData.append('answer_key_file', answerKeyFile);
+      }
+      const url = `${API_BASE}/tests/generate-from-pdf`;
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        let err = 'Failed to generate test from PDF';
+        try { const d = await response.json(); err = d.detail || err; } catch {}
+        throw new Error(err);
+      }
+      return response.json() as Promise<TestOut>;
+    },
     getTest: (test_id: number) => fetchApi<TestQuestion[]>(`/tests/${test_id}`),
     submit: (test_id: number, answers: Array<{ question_id: number; chosen_ans: string | null; time_taken_seconds: number }>) =>
       fetchApi<SubmitResult>(`/tests/${test_id}/submit`, {
@@ -264,5 +317,22 @@ export const apiClient = {
   },
   suggestions: {
     get: () => fetchApi<any>('/suggestions'),
+  },
+  facts: {
+    getRandom: (count = 1) => fetchApi<FactOut[]>(`/facts/random?count=${count}`),
+    getFlashcards: (subject?: string, chapter?: string) => {
+      const params = new URLSearchParams();
+      if (subject) params.append('subject', subject);
+      if (chapter) params.append('chapter', chapter);
+      const qs = params.toString();
+      return fetchApi<FactOut[]>(`/facts/flashcards${qs ? `?${qs}` : ''}`);
+    },
+  },
+  syllabusTracker: {
+    get: () => fetchApi<SubjectProgress[]>('/syllabus/tracker'),
+    toggle: (chapter_name: string, topic_name: string, is_completed: boolean) => fetchApi<any>('/syllabus/tracker/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ chapter_name, topic_name, is_completed })
+    })
   },
 };

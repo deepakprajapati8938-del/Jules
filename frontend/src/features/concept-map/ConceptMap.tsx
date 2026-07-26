@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Map, RefreshCw, Network, Search, Filter } from 'lucide-react';
+import { Map, RefreshCw, Network } from 'lucide-react';
 import ForceGraph2D from 'react-force-graph-2d';
 
 interface ConceptNode {
@@ -11,6 +11,8 @@ interface ConceptNode {
   chapter: string;
   is_weak: boolean;
 }
+
+import { NEET_SYLLABUS } from '../../core/syllabus';
 
 interface ConceptLink {
   source: string;
@@ -27,16 +29,7 @@ export default function ConceptMap() {
   const [links, setLinks] = useState<ConceptLink[]>([]);
   
   const [viewMode, setViewMode] = useState<'tree' | 'graph'>('tree');
-  const [chapter, setChapter] = useState('Cell The Unit Of Life'); // Default
-  
-  // Available chapters for demo (exact match with DB)
-  const sampleChapters = [
-    "Cell The Unit Of Life",
-    "Human Reproduction",
-    "Biomolecules",
-    "Principles Of Inheritance",
-    "Motion In A Straight Line"
-  ];
+  const [chapter, setChapter] = useState(NEET_SYLLABUS['Biology']?.[0] || 'Cell The Unit Of Life'); 
 
   const [hoverNode, setHoverNode] = useState<ConceptNode | null>(null);
 
@@ -150,8 +143,12 @@ export default function ConceptMap() {
           value={chapter}
           onChange={(e) => setChapter(e.target.value)}
         >
-          {sampleChapters.map(ch => (
-            <option key={ch} value={ch} className="bg-background text-foreground">{ch}</option>
+          {Object.entries(NEET_SYLLABUS).map(([subject, chapters]) => (
+            <optgroup key={subject} label={subject} className="bg-surface text-secondary font-semibold">
+              {chapters.map(ch => (
+                <option key={ch} value={ch} className="bg-background text-foreground font-medium">{ch}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
         

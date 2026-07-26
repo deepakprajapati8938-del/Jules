@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Check, X, RefreshCw } from 'lucide-react';
 import DiagramWithHotspots from '../../components/DiagramWithHotspots';
-import { apiClient } from '../../core/api-client'; // using base URL from there if possible, or fetch directly
 
 interface Hotspot {
   id: number;

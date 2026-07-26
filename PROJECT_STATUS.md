@@ -11,11 +11,10 @@
   - Core pipeline: PDF text extraction, markdown conversion, heading-based chunking, Gemini embedding (`gemini-embedding-2`), Supabase pgvector storage.
 
 - **Phase 2 (Full Syllabus Scale-up + Syllabus Config + PYQ Bank):** ✅ **COMPLETE**
-  - Stage 1 text ingestion: 1,601 NCERT chunks across 42 chapters (Biology + Chemistry + Physics)
-  - PYQ ingestion: 379 PYQ chunks (10 out of 12 papers successfully ingested, remaining skipped due to network disconnect — all 3 subjects)
-  - Syllabus config: 42 chapters seeded, 5 chapters marked excluded
-  - 123 chunks flagged `syllabus_excluded = true`
-  - Total in `neet_chunks`: **1,980 rows**
+  - Stage 1 text ingestion: 3,109 NCERT chunks across 48 chapters (Biology + Chemistry + Physics)
+  - PYQ ingestion: 379 PYQ chunks
+  - Syllabus config: 48 chapters seeded, 5 chapters marked excluded
+  - Total in `neet_chunks`: **3,488 rows**
 
 - **Phase 3 (Diagram Extraction & Captioning):** 🟡 **Ready to Run (Stage 2)**
   - `diagrams` table: EXISTS (0 rows — Stage 2 not yet run)
@@ -58,14 +57,12 @@
 ## 3. Real Database State
 
 - **Provider:** Supabase (pgvector)
-- **`neet_chunks` table:** 1,980 rows total
-  - NCERT chunks: 1,601
+- **`neet_chunks` table:** 3,488 rows total
+  - NCERT chunks: 3,109
   - PYQ chunks: 379
-  - Excluded (syllabus_excluded=true): 123
-- **`syllabus_config` table:** 42 rows (5 marked included=false)
+- **`syllabus_config` table:** 48 rows (5 marked included=false)
   - Excluded: Transport In Plants, Mineral Nutrition, Digestion And Absorption, Reproduction In Organisms, Strategies For Enhancement
-  - Note: `Environmental Issues` chapter not found (stored under generic "ChapterX" name)
-- **`diagrams` table:** EXISTS, 0 rows (Stage 2 not yet run)
+  - Note: Physics and Chemistry chapters correctly named and ingested.
 - **RPC `match_neet_chunks`:** Cosine similarity search, filters `syllabus_excluded=true`.
 
 ---
@@ -119,13 +116,16 @@
   - Refined Dashboard into a strict bento grid with glowing progress rings.
   - Refined Chat interfaces with floating prompt bars, glowing orbs for empty states, and distinct user bubble styles.
   - Upgraded Tests interface into tactile instrument panels.
-- [x] **Phase 6 & 7 (Chat Enhancements & Session History):** History + Bookmarking
+- [x] **Phase 6 & 7 (Chat Enhancements, History & Facts):**
   - Added Save/Bookmark functionality in UI.
   - Implemented persistent date separators in chat view.
   - Created `chat_sessions` table and unified both NCERT and Personal chats under session history.
   - Upgraded `llm_wrapper.py` and model dropdown to exclusively use `gemini-flash-latest` (1.5 models deprecated).
   - Fixed Groq Model mapping out-of-sync lists.
   - Added multimodal attachment support (Image/PDF) to both NCERT and Personal chats using `gemini-flash-latest`.
+  - Added "NCERT Byte" daily facts and Smart Loading screen facts.
+  - Extracted 5,478 facts to `ncert_facts` table via background scripts (100% complete across all NCERT chapters and PYQs).
+  - Wired `Flashcards.tsx` to read facts from backend.
 - [x] **Phase 8 (Concept Map):** Data ingestion, backend, and UI built
   - Schema (`sql/phase8_setup.sql`) added `concept_edges` table.
   - Scripts `scripts/generate_concept_edges.py` added to populate AI-generated connections.
@@ -151,4 +151,16 @@
   - Added `InteractiveWidget.tsx` frontend component for strictly sandboxed (`allow-scripts`) widget rendering with 4s timeout fallback.
   - Added `DiagramWithHotspots.tsx` component and `HotspotReview.tsx` admin screen to approve AI hotspots.
   - `NcertChat.tsx` updated to support `widget_html`.
+- [x] **Phase 11 (PDF to Mock Test & NTA UI):** CBT Interface and PDF ingestion
+  - Added `POST /generate-from-pdf` endpoint in `backend/routers/tests.py`.
+  - Configured `src.llm_wrapper.call_llm` to process Base64 PDFs via Gemini Vision.
+  - Updated `Tests.tsx` with NTA layout (Clear Response, Mark for Review buttons).
+  - Added full NTA CBT palette color-coding (Gray, Red, Green, Purple, Purple/Green dot).
+  - Added multi-threaded 4-page PDF chunking to support full 200-question mock tests without timeouts.
+  - Added Two-Pass Architecture for optional separate Answer Key PDF uploads.
+  - Added dynamic loading screen with simulated progress bar to keep students engaged during 40s wait times.
+- [x] **Phase 12 (Onboarding & User Guide):** Jules Handbook
+  - Added `Handbook.tsx` with a premium Dark Glassmorphism Bento grid layout.
+  - Implemented interactive modal cards for core features (NCERT Chat, CBT Tests, Concept Map, Journal).
+  - Added `/guide` route and wired it to the AppShell sidebar.
 - [ ] Diagram captioning (DEFERRED) — requires paid Vision API tier. Images extracted but no captions. Will add later. Free tier quotas make batch processing impractical.

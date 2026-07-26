@@ -52,7 +52,7 @@ export default function ReflectionJournal() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto w-full">
+    <div className="h-full overflow-y-auto pb-24 scrollbar-hide p-4 md:p-8 max-w-2xl mx-auto w-full">
       <h2 className="text-2xl font-semibold text-foreground mb-2">Evening Reflection</h2>
       <p className="text-secondary mb-8">Take a moment to close out the day.</p>
 

@@ -14,6 +14,7 @@ class DashboardStatsResponse(BaseModel):
     progress_percentage: int
     study_trend: list[StudyTrend]
     total_study_minutes_7d: int
+    neglected_chapters: list[str]
 
 @router.get("/stats", response_model=DashboardStatsResponse)
 def get_dashboard_stats(sb: Client = Depends(get_supabase)):
@@ -84,8 +85,23 @@ def get_dashboard_stats(sb: Client = Depends(get_supabase)):
         d_str = (now - timedelta(days=i)).strftime("%a")
         ordered_trend.append(next(item for item in study_trend if item.date == d_str))
 
+    # 3. Calculate Neglected Chapters
+    # Chapters that are included but haven't been logged in study_sessions in the last 14 days
+    fourteen_days_ago = now - timedelta(days=14)
+    recent_sessions = sb.table("study_sessions").select("chapter_name").gte("created_at", fourteen_days_ago.isoformat()).execute()
+    recent_chapters = {s["chapter_name"] for s in (recent_sessions.data or [])}
+    
+    neglected_chapters = []
+    # Sort included chapters, we will just pick a few that aren't in recent_chapters
+    for ch in syl_chapters.keys():
+        if ch not in recent_chapters:
+            neglected_chapters.append(ch)
+            if len(neglected_chapters) >= 3:
+                break
+
     return DashboardStatsResponse(
         progress_percentage=progress,
         study_trend=ordered_trend,
-        total_study_minutes_7d=total_minutes_7d
+        total_study_minutes_7d=total_minutes_7d,
+        neglected_chapters=neglected_chapters
     )

@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Load .env from the project root (one level above src/)
 _PROJECT_ROOT = Path(__file__).parent.parent
-load_dotenv(_PROJECT_ROOT / ".env")
+load_dotenv(_PROJECT_ROOT / ".env.local")
 
 
 def _require(key: str) -> str:
@@ -45,7 +45,24 @@ def get_groq_api_key() -> str:
 
 # Current non-deprecated models (as of July 2026)
 GEMINI_TEXT_MODEL: str = "gemini-flash-latest"     # text generation (confirmed working)
+GEMINI_PRO_MODEL: str = os.getenv("GEMINI_PRO_MODEL", "gemini-2.5-pro")  # heavy reasoning
 GEMINI_EMBED_MODEL: str = "gemini-embedding-2"  # embeddings
+
+PRO_FALLBACK_CHAIN = [
+    GEMINI_PRO_MODEL,
+    "gemini-flash-latest",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.6-27b",
+    "llama-3.3-70b-versatile"
+]
+
+TEXT_FALLBACK_CHAIN = [
+    GEMINI_TEXT_MODEL,
+    "gemini-2.5-flash-lite",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.6-27b",
+    "llama-3.1-8b-instant"
+]
 
 # Output dimensionality (Matryoshka reduction)
 EMBEDDING_DIM: int = 768

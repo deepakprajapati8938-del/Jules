@@ -46,7 +46,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex-1 overflow-y-auto w-full pb-20 scrollbar-hide">
+    <div className="h-full overflow-y-auto w-full pb-20 scrollbar-hide">
       
       {/* Hero Section with Mesh Gradient */}
       <div className="relative pt-12 pb-10 px-4 md:px-8 mb-8 overflow-hidden rounded-b-[3rem] shadow-glass-sm border-b border-border-glass">

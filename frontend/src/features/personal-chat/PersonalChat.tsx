@@ -301,7 +301,7 @@ export default function PersonalChat() {
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 pb-32"
+        className="h-full overflow-y-auto scrollbar-hide p-4 md:p-8 space-y-8 pb-32"
       >
         {!isLoadingHistory && messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center space-y-6 px-6 text-center">
@@ -368,24 +368,24 @@ export default function PersonalChat() {
                               <div className="w-2 h-2 bg-violet/40 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
                             </div>
                           ) : (
-                            <ReactMarkdown 
-                              remarkPlugins={[remarkGfm]}
-                              className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-background/50 prose-pre:border-border-glass prose-h3:text-violet prose-a:text-violet hover:prose-a:text-violet/80"
-                              components={{
-                                p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />,
-                                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1 text-foreground/90 marker:text-violet/50" {...props} />,
-                                ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4 space-y-1 text-foreground/90 marker:text-violet/50" {...props} />,
-                                li: ({node, ...props}) => <li className="" {...props} />,
-                                strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                                h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-foreground mt-6 mb-2" {...props} />,
-                                code({node, inline, className, children, ...props}: any) {
-                                  const match = /language-(\w+)/.exec(className || '');
-                                  const isMathBlock = match && match[1] === 'math_block';
-                                  const content = String(children).replace(/\n$/, '');
-                                  
-                                  if (isMathBlock) {
-                                    return (
-                                      <div 
+                            <div className="markdown-body">
+                              <ReactMarkdown 
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />,
+                                  ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1 text-foreground/90 marker:text-violet/50" {...props} />,
+                                  ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4 space-y-1 text-foreground/90 marker:text-violet/50" {...props} />,
+                                  li: ({node, ...props}) => <li className="" {...props} />,
+                                  strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                                  h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-foreground mt-6 mb-2" {...props} />,
+                                  code({node, inline, className, children, ...props}: any) {
+                                    const match = /language-(\w+)/.exec(className || '');
+                                    const isMathBlock = match && match[1] === 'math_block';
+                                    const content = String(children).replace(/\n$/, '');
+                                    
+                                    if (isMathBlock) {
+                                      return (
+                                        <div
                                         className="overflow-x-auto py-2 my-2 text-center" 
                                         dangerouslySetInnerHTML={{ __html: katex.renderToString(content, { displayMode: true, throwOnError: false }) }} 
                                       />
@@ -409,7 +409,8 @@ export default function PersonalChat() {
                               }}
                             >
                               {preprocessMath(msg.content)}
-                            </ReactMarkdown>
+                              </ReactMarkdown>
+                            </div>
                           )}
                         </div>
                         <div className="flex items-center justify-end gap-4 mt-1 w-full opacity-60 hover:opacity-100 transition-opacity">
@@ -454,21 +455,21 @@ export default function PersonalChat() {
       <div className="p-4 md:p-6 shrink-0 absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-12 z-20 pointer-events-none">
         <div className="max-w-3xl mx-auto bg-surface-strong rounded-[2rem] p-2 flex items-end gap-2 transition-all focus-within:border-violet/40 focus-within:shadow-glow-violet border border-border-glass shadow-glass-sm pointer-events-auto relative">
           
-          <div className="flex items-center gap-0.5 shrink-0 mb-1 ml-1">
+          <div className="flex items-center shrink-0 mb-1 ml-0.5 md:ml-1">
             <button 
               onClick={() => setIsSidebarOpen(true)}
               title="Chat History"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
             >
-              <Clock className="w-[18px] h-[18px]" />
+              <Clock className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             
             <button 
               onClick={handleNewTopic}
               title="Start New Topic"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
             >
-              <Sparkles className="w-[18px] h-[18px]" />
+              <Sparkles className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
           </div>
 
@@ -517,20 +518,20 @@ export default function PersonalChat() {
             />
           </div>
           
-          <div className="flex items-center gap-0.5 shrink-0 mb-1 mr-1">
+          <div className="flex items-center shrink-0 mb-1 mr-0.5 md:mr-1">
             <button 
               onClick={() => setGraphMode(!graphMode)}
               title="Toggle Graph Mode"
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all focus:outline-none ${graphMode ? 'text-violet bg-violet/20 shadow-[0_0_10px_rgba(139,92,246,0.3)]' : 'text-muted hover:text-violet hover:bg-violet/10'}`}
+              className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all focus:outline-none ${graphMode ? 'text-violet bg-violet/20 shadow-[0_0_10px_rgba(139,92,246,0.3)]' : 'text-muted hover:text-violet hover:bg-violet/10'}`}
             >
-              <BarChart2 className="w-[18px] h-[18px]" />
+              <BarChart2 className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             <button 
               onClick={() => cameraInputRef.current?.click()}
               title="Take Photo"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
             >
-              <Camera className="w-[18px] h-[18px]" />
+              <Camera className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             <input 
               type="file" 
@@ -544,16 +545,16 @@ export default function PersonalChat() {
             <button 
               onClick={() => fileInputRef.current?.click()}
               title="Attach File"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-violet hover:bg-violet/10 focus:outline-none"
             >
-              <Paperclip className="w-[18px] h-[18px]" />
+              <Paperclip className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             </button>
             <button 
               onClick={handleSend}
               disabled={(!input.trim() && !attachment) || isSending}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all bg-violet/10 text-violet hover:bg-violet hover:text-white disabled:opacity-30 disabled:bg-transparent disabled:text-muted focus:outline-none"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all bg-violet/10 text-violet hover:bg-violet hover:text-white disabled:opacity-30 disabled:bg-transparent disabled:text-muted focus:outline-none ml-0.5 md:ml-1"
             >
-              <Send className="w-[18px] h-[18px] -ml-0.5" />
+              <Send className="w-4 h-4 md:w-[18px] md:h-[18px] -ml-0.5" />
             </button>
           </div>
         </div>

@@ -12,12 +12,16 @@ import SavedItems from './features/saved-items/SavedItems';
 import Flashcards from './features/flashcards/Flashcards';
 import DailyLog from './features/daily-log/DailyLog';
 import Home from './features/home/Home';
+import SyllabusTracker from './features/syllabus-tracker/SyllabusTracker';
+import SelectionToAsk from './components/SelectionToAsk';
 
 // Lazy loaded components for heavy screens
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard'));
 const Tests = lazy(() => import('./features/tests/Tests'));
 const ConceptMap = lazy(() => import('./features/concept-map/ConceptMap'));
 const HotspotReview = lazy(() => import('./features/admin/HotspotReview'));
+const CheatSheet = lazy(() => import('./features/cheatsheet/CheatSheet'));
+const Handbook = lazy(() => import('./features/handbook/Handbook'));
 
 // Loading Fallback
 const LoadingScreen = () => (
@@ -45,6 +49,7 @@ function App() {
     <>
       {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
       <Router>
+        <SelectionToAsk />
         <Routes>
           {/* All main app routes are wrapped in the AppShell */}
           <Route path="/" element={<AppShell />}>
@@ -59,9 +64,12 @@ function App() {
           <Route path="saves" element={<SavedItems />} />
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="daily-log" element={<DailyLog />} />
+          <Route path="syllabus" element={<SyllabusTracker />} />
           
           {/* Lazy loaded routes */}
+          <Route path="guide" element={<Suspense fallback={<LoadingScreen />}><Handbook /></Suspense>} />
           <Route path="dashboard" element={<Suspense fallback={<LoadingScreen />}><Dashboard /></Suspense>} />
+          <Route path="cheatsheet" element={<Suspense fallback={<LoadingScreen />}><CheatSheet /></Suspense>} />
           <Route path="tests" element={<Suspense fallback={<LoadingScreen />}><Tests /></Suspense>} />
           <Route path="concept-map" element={<Suspense fallback={<LoadingScreen />}><ConceptMap /></Suspense>} />
           <Route path="admin/hotspots" element={<Suspense fallback={<LoadingScreen />}><HotspotReview /></Suspense>} />
