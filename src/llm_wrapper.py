@@ -46,36 +46,6 @@ def _is_rate_limit(exc: Exception) -> bool:
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
-def call_llm(
-    system_prompt: str,
-    user_prompt: str,
-    context: str | None = None,
-    *,
-    max_retries: int = 5,
-    base_delay: float = 2.0,
-    model_name: str | None = None,
-    attachment_data: str | None = None,
-    attachment_mime_type: str | None = None,
-) -> str:
-    """
-    Single entry point for all text-generation LLM calls in this project.
-
-    Args:
-        system_prompt: Instructions / role for the model.
-        user_prompt:   The user's actual message or task.
-        context:       Optional retrieved context (e.g. NCERT chunks).
-                       Injected between system and user prompt when provided.
-        max_retries:   How many times to retry on rate-limit errors.
-        base_delay:    Initial backoff delay in seconds (doubles each retry).
-        model_name:    Optional override for the Gemini model (e.g., 'gemini-pro-latest').
-
-    Returns:
-        The model's text response as a plain string.
-
-    Raises:
-        RuntimeError: If all retries are exhausted.
-        Exception:    Any non-rate-limit error is re-raised immediately.
-    """
 def _call_single_model(
     model_name: str,
     system_prompt: str,

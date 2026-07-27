@@ -91,4 +91,7 @@ SCANNED_PAGE_CHAR_THRESHOLD: int = 50
 
 # Markdown output directory (relative to project root)
 OUTPUT_DIR: Path = _PROJECT_ROOT / "output"
-OUTPUT_DIR.mkdir(exist_ok=True)
+try:
+    OUTPUT_DIR.mkdir(exist_ok=True)
+except (OSError, PermissionError):
+    pass  # Serverless environments (e.g. Vercel) have read-only filesystems

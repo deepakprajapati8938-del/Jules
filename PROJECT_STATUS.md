@@ -69,7 +69,7 @@
 
 ## 4. Known Issues / Follow-up
 
-1. **Generic chapter names (Chemistry & Physics):** Many Chemistry/Physics PDFs were renamed to `ChapterX` format due to API rate limits during the rename phase. These are stored in `neet_chunks` with metadata `chapter: "Chapter3"` etc. — not human-readable. Does not affect retrieval accuracy but does affect `syllabus_config` display.
+1. ~~**Generic chapter names (Chemistry & Physics):** Many Chemistry/Physics PDFs were renamed to `ChapterX` format due to API rate limits during the rename phase. These are stored in `neet_chunks` with metadata `chapter: "Chapter3"` etc. — not human-readable. Does not affect retrieval accuracy but does affect `syllabus_config` display. **Consequence: chapter-wise tests for Physics/Chemistry will find 0 questions** since the frontend sends human-readable names that don't match stored `ChapterX` values.~~ (✅ FIXED: Renamed and re-ingested on 2026-07-27)
 2. **EnvironmentalIssues not excluded:** The 6th excluded chapter wasn't found because it has a generic `ChapterX` name. Low impact — the chapter content is in the DB but retrieval quality for this topic is acceptable.
 3. **PYQ "Unknown" chapter mappings:** Some PYQ questions (especially from combined papers like `2026_Physics_10.pdf`) mapped to `Unknown` chapter because Physics syllabus_config only has generic chapter names. The questions are still embedded and retrievable by semantic similarity.
 4. **Stage 2 (caption_diagrams.py):** Not yet run. Chat Q&A works without it.
@@ -164,3 +164,8 @@
   - Implemented interactive modal cards for core features (NCERT Chat, CBT Tests, Concept Map, Journal).
   - Added `/guide` route and wired it to the AppShell sidebar.
 - [ ] Diagram captioning (DEFERRED) — requires paid Vision API tier. Images extracted but no captions. Will add later. Free tier quotas make batch processing impractical.
+- [x] **Vercel Deployment Fixes (2026-07-27):** Fixed 3 bugs that caused failures after Vercel/production deploy:
+  - `backend/routers/tests.py`: Fixed JSONB filter operators `->` → `->>` for chapter, subject, and source_type metadata fields. The `->` operator returns raw JSON (quoted), while `->>` returns plain text — Supabase `eq` filter only matches text, so chapter-wise and subject-wise tests returned 0 questions on production.
+  - `src/config.py`: Wrapped `OUTPUT_DIR.mkdir()` in `try/except (OSError, PermissionError)` to prevent import-time crash on Vercel's read-only serverless filesystem. This was silently crashing every backend endpoint.
+  - `src/llm_wrapper.py`: Removed dead stub `call_llm` definition (had docstring only, no body). Only the real implementation at module level remains.
+  - **Data Layer (Physics/Chemistry)**: Fixed the generic `ChapterX` naming issue by standardizing PDF names and re-ingesting them correctly, then re-seeding the syllabus. Chapter-wise tests for Physics and Chemistry now work as expected.

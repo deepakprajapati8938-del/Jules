@@ -80,7 +80,7 @@ def _fetch_questions(sb: Client, req: GenerateTestRequest) -> list[dict]:
         q = q.filter("metadata->>subject", "eq", req.subject)
     # mock/custom: no filter — full bank
     
-    res = q.eq("metadata->>source_type", "PYQ").limit(500).execute()
+    res = q.filter("metadata->>source_type", "eq", "PYQ").limit(500).execute()
     rows = res.data or []
     random.shuffle(rows)
     return rows[:req.num_questions]

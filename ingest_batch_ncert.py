@@ -19,25 +19,37 @@ logger = logging.getLogger(__name__)
 
 def parse_filename(filepath: Path):
     """
-    Parses Class{11|12}_Ch{NN}_{ChapterNameNoSpaces}.pdf
-    Returns (subject, chapter_name) or (None, None) if invalid.
+    Parses two filename formats:
+    1. Class{11|12}_Ch{NN}_{ChapterNameNoSpaces}.pdf  e.g. Class11_Ch01_TheLivingWorld.pdf
+    2. Plain descriptive name e.g. Gravitation.pdf, Solutions.pdf, HYDROCARBONS.pdf
+
+    Returns (subject, chapter_name) or (None, None) if it's a junk file to skip.
     """
     subject = filepath.parent.name
     filename = filepath.stem
-    
-    # Match Class11_Ch01_TheLivingWorld
-    match = re.match(r"^Class(11|12)_Ch\d+_(.+)$", filename)
-    if not match:
+
+    # Skip files that are clearly appendix/answer/reference material
+    # NOTE: Be specific — avoid words that appear in real chapter names
+    SKIP_KEYWORDS = ["answer to ", "appendix", "answers to some", "answer to some",
+                     "definitions of the si", "atomic number and molar",
+                     "selected problems"]
+    if any(kw in filename.lower() for kw in SKIP_KEYWORDS):
         return None, None
-        
-    chapter_camel = match.group(2)
-    # Convert CamelCase/NoSpaces to space separated words by inserting space before caps
-    # e.g., TheLivingWorld -> The Living World
-    chapter_name = re.sub(r'([A-Z])', r' \1', chapter_camel).strip()
-    
-    # Fix multiple spaces just in case
+
+    # Format 1: Class11_Ch01_TheLivingWorld
+    match = re.match(r"^Class(11|12)_Ch\d+_(.+)$", filename)
+    if match:
+        chapter_camel = match.group(2)
+        # Convert CamelCase to spaces: TheLivingWorld -> The Living World
+        chapter_name = re.sub(r'([A-Z])', r' \1', chapter_camel).strip()
+        chapter_name = re.sub(r'\s+', ' ', chapter_name)
+        return subject, chapter_name
+
+    # Format 2: Plain descriptive name (Gravitation, Solutions, HYDROCARBONS, etc.)
+    # Convert to Title Case, replace underscores/hyphens with spaces
+    chapter_name = filename.replace('_', ' ').replace('-', ' ')
+    chapter_name = chapter_name.title().strip()
     chapter_name = re.sub(r'\s+', ' ', chapter_name)
-    
     return subject, chapter_name
 
 def main():
@@ -46,7 +58,10 @@ def main():
         logger.error(f"Directory {data_dir} does not exist.")
         sys.exit(1)
         
-    pdf_files = list(data_dir.rglob("*.pdf"))
+    pdf_files = [
+        p for p in data_dir.rglob("*.pdf")
+        if "_skip" not in p.parts  # exclude appendix/junk folders
+    ]
     if not pdf_files:
         logger.warning(f"No PDFs found in {data_dir}")
         sys.exit(0)
@@ -70,10 +85,20 @@ def main():
         # Check if already ingested — use count-only query, don't fetch rows
         from src.embedder import _get_supabase
         sb = _get_supabase()
-        existing = sb.table("neet_chunks").select("id", count="exact", head=True).eq("metadata->>chapter", chapter_name).execute()
-        if existing.count and existing.count > 0:
-            logger.info(f"  Skipping '{chapter_name}' — already ingested ({existing.count} chunks).")
-            results.append({"file": pdf_path.name, "status": "SKIPPED", "chunks": existing.count, "error": "Already ingested"})
+        already_ingested = False
+        for attempt in range(3):
+            try:
+                existing = sb.table("neet_chunks").select("id", count="exact", head=True)\
+                    .filter("metadata->>chapter", "eq", chapter_name).execute()
+                if existing.count and existing.count > 4:  # require >4 chunks — avoids re-skipping thin/bad entries
+                    logger.info(f"  Skipping '{chapter_name}' — already ingested ({existing.count} chunks).")
+                    results.append({"file": pdf_path.name, "status": "SKIPPED", "chunks": existing.count, "error": "Already ingested"})
+                    already_ingested = True
+                break
+            except Exception as e:
+                logger.warning(f"  Supabase check failed (attempt {attempt+1}/3): {e}")
+                import time; time.sleep(5)
+        if already_ingested:
             continue
             
         try:
