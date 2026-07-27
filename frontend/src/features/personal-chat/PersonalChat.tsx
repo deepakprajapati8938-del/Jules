@@ -81,8 +81,8 @@ export default function PersonalChat() {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
           
-          const base64 = canvas.toDataURL(file.type);
-          setAttachment({ data: base64, type: file.type, name: file.name });
+          const base64 = canvas.toDataURL('image/jpeg', 0.6);
+          setAttachment({ data: base64, type: 'image/jpeg', name: file.name });
         };
         img.src = event.target?.result as string;
       };
@@ -491,7 +491,7 @@ export default function PersonalChat() {
                     <img src={attachment.data} alt="preview" className="w-full h-full object-cover" />
                   )}
                 </div>
-                <span className="text-[11px] font-medium text-foreground truncate max-w-[120px]">
+                <span className="text-[11px] font-medium text-foreground truncate max-w-[120px] min-w-0 block">
                   {attachment.name}
                 </span>
                 <button 

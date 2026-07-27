@@ -140,8 +140,12 @@ def answer(
     Returns:
         AnswerResult with chunks, answer text, and fallback_applied flag.
     """
-    chunks = retrieve(question, top_k=top_k, threshold=threshold)
-    is_interactive = require_graph
+    if question.strip():
+        chunks = retrieve(question, top_k=top_k, threshold=threshold)
+        is_interactive = require_graph
+    else:
+        chunks = []
+        is_interactive = False
     
     raw_answer = _generate_answer(
         question, 

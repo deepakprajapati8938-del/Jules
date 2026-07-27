@@ -154,8 +154,10 @@ def main():
         if not year or not subject:
             logger.warning(f"Skipping {pdf_path.name} - does not match naming convention {{Year}}_{{Subject}}.pdf")
             continue
-            
         logger.info(f"Extracted -> Year: {year}, Subject: {subject}")
+        if subject == "Biology":
+            logger.info(f"Skipping Biology PYQ: {pdf_path.name} (already perfectly mapped)")
+            continue
         
         valid_chapters = get_ncert_chapters(subject)
         if not valid_chapters:
