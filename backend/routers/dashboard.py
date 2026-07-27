@@ -3,6 +3,9 @@ from supabase import Client
 from datetime import datetime, timedelta, timezone
 from backend.deps import get_supabase
 from pydantic import BaseModel
+import json
+import random
+from src.llm_wrapper import call_llm
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -105,3 +108,70 @@ def get_dashboard_stats(sb: Client = Depends(get_supabase)):
         total_study_minutes_7d=total_minutes_7d,
         neglected_chapters=neglected_chapters
     )
+
+class QuickMCQResponse(BaseModel):
+    question: str
+    options: list[str]
+    correct_answer_index: int
+    explanation: str
+
+@router.get("/quick-mcq", response_model=QuickMCQResponse)
+def get_quick_mcq(sb: Client = Depends(get_supabase)):
+    # 1. Fetch a random fact from the database
+    # Fetch a block and pick one randomly
+    res = sb.table("ncert_facts").select("fact_text, chapter_name, subject").limit(200).execute()
+    facts = res.data or []
+    
+    if not facts:
+        # Fallback
+        return QuickMCQResponse(
+            question="Which of the following is true about Jules?",
+            options=["It is a NEET prep app", "It is a game", "It is a social network", "It is a search engine"],
+            correct_answer_index=0,
+            explanation="Jules is your personal NEET prep tool."
+        )
+        
+    fact = random.choice(facts)
+    
+    # 2. Call LLM to generate MCQ
+    system_prompt = (
+        "You are an expert NEET biology/chemistry/physics tutor. "
+        "Generate exactly ONE multiple choice question based on the provided fact. "
+        "The question must be challenging but fair. Provide exactly 4 options. "
+        "Return your response ONLY as a valid JSON object matching this schema:\n"
+        "{\n"
+        '  "question": "The question text",\n'
+        '  "options": ["A", "B", "C", "D"],\n'
+        '  "correct_answer_index": 0,\n'
+        '  "explanation": "Short explanation of why this is correct"\n'
+        "}\n"
+        "Do not include markdown blocks or any other text."
+    )
+    user_prompt = f"Fact: {fact['fact_text']}\nSubject: {fact['subject']}\nChapter: {fact['chapter_name']}"
+    
+    try:
+        response_text = call_llm(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            model_name="gemini-3.5-flash-lite",
+            max_retries=2
+        )
+        # Strip markdown formatting if the model still outputs it
+        cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+        data = json.loads(cleaned_text)
+        
+        return QuickMCQResponse(
+            question=data.get("question", "Failed to parse question"),
+            options=data.get("options", ["A", "B", "C", "D"]),
+            correct_answer_index=int(data.get("correct_answer_index", 0)),
+            explanation=data.get("explanation", "Failed to parse explanation")
+        )
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to generate quick MCQ: {e}")
+        return QuickMCQResponse(
+            question=f"Fact: {fact['fact_text']}. What is the correct conclusion?",
+            options=["True", "False", "Not mentioned", "None of the above"],
+            correct_answer_index=0,
+            explanation="Error generating question via LLM."
+        )

@@ -93,6 +93,13 @@ export interface DashboardStats {
   neglected_chapters: string[];
 }
 
+export interface QuickMCQResponse {
+  question: string;
+  options: string[];
+  correct_answer_index: number;
+  explanation: string;
+}
+
 export interface Suggestion {
   chapter_name: string;
   subject: string;
@@ -247,6 +254,7 @@ export const apiClient = {
   },
   dashboard: {
     getStats: () => fetchApi<DashboardStats>('/dashboard/stats'),
+    getQuickMCQ: () => fetchApi<QuickMCQResponse>('/dashboard/quick-mcq'),
   },
   streak: {
     get: () => fetchApi<StreakState>('/streak'),

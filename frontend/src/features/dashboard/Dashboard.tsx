@@ -15,6 +15,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import QuickMCQWidget from './QuickMCQWidget';
 
 export default function Dashboard() {
   const [confidenceStats, setConfidenceStats] = useState({
@@ -93,25 +94,29 @@ export default function Dashboard() {
         )}
       </div>
 
-      {dailyFact && (
-        <div className="mb-8 glass rounded-2xl p-5 shadow-glass-sm border-l-4 border-l-amber-400 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Lightbulb className="w-16 h-16 text-amber-400" />
-          </div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <Lightbulb className="w-5 h-5 text-amber-400" />
-              <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider">NCERT Daily Byte</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {dailyFact && (
+          <div className="glass rounded-2xl p-5 shadow-glass-sm border-l-4 border-l-amber-400 relative overflow-hidden group h-full flex flex-col">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+              <Lightbulb className="w-16 h-16 text-amber-400" />
             </div>
-            <p className="text-foreground/90 font-medium md:text-lg leading-relaxed">
-              "{dailyFact.fact_text}"
-            </p>
-            <div className="mt-3 text-xs text-secondary font-medium">
-              Source: {dailyFact.chapter_name} • {dailyFact.subject}
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-3">
+                <Lightbulb className="w-5 h-5 text-amber-400" />
+                <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider">NCERT Daily Byte</h3>
+              </div>
+              <p className="text-foreground/90 font-medium md:text-lg leading-relaxed flex-1">
+                "{dailyFact.fact_text}"
+              </p>
+              <div className="mt-4 text-xs text-secondary font-medium">
+                Source: {dailyFact.chapter_name} • {dailyFact.subject}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        
+        <QuickMCQWidget />
+      </div>
 
       {stats.neglected_chapters && stats.neglected_chapters.length > 0 && (
         <div className="mb-6 p-5 glass-strong rounded-2xl border border-secondary/20 shadow-glass-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-up">
@@ -146,6 +151,68 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
+      {/* Study Time Chart & Activity Strip (Full Width, Moved Up) */}
+      <div className="glass rounded-3xl p-6 lg:p-8 mb-6">
+        <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold text-foreground tracking-tight text-lg mb-1">Study Time Trend</h3>
+            <p className="text-xs text-secondary tracking-wide uppercase">Past 7 Days</p>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-bold text-foreground tracking-tight">{stats.total_study_minutes_7d} <span className="text-base text-secondary font-medium">mins</span></span>
+          </div>
+        </div>
+        
+        {/* 7-Day Activity Strip */}
+        <div className="flex items-center justify-between gap-2 mb-8 px-2 md:px-8">
+          {stats.study_trend.map((day, i) => {
+            const isActive = day.minutes > 0;
+            return (
+              <div key={i} className="flex flex-col items-center gap-2">
+                <div 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
+                    isActive 
+                      ? 'bg-accent text-white shadow-glow-accent scale-110' 
+                      : 'border-2 border-border-glass text-secondary bg-surface-strong'
+                  }`}
+                  title={`${day.minutes} mins`}
+                >
+                  {isActive ? <CheckCircle2 className="w-5 h-5 text-white" /> : <span className="opacity-50">-</span>}
+                </div>
+                <span className="text-[10px] uppercase text-secondary font-medium tracking-wider">{day.date}</span>
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={studyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorMinutes" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ff8a3d" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#ff8a3d" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 12 }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 12 }} />
+              <Tooltip 
+                contentStyle={{ 
+                  borderRadius: '16px', 
+                  border: '1px solid rgba(255,255,255,0.10)', 
+                  background: 'rgba(20,20,25,0.95)', 
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  fontSize: '13px',
+                  color: '#fafafa',
+                }}
+              />
+              <Area type="monotone" dataKey="minutes" stroke="#ff8a3d" strokeWidth={3} fillOpacity={1} fill="url(#colorMinutes)" activeDot={{ r: 6, fill: '#ff8a3d', stroke: '#fff', strokeWidth: 2 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         
@@ -239,68 +306,6 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Study Time Chart & Activity Strip */}
-      <div className="glass rounded-3xl p-6 lg:p-8">
-        <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h3 className="font-semibold text-foreground tracking-tight text-lg mb-1">Study Time Trend</h3>
-            <p className="text-xs text-secondary tracking-wide uppercase">Past 7 Days</p>
-          </div>
-          <div className="text-right">
-            <span className="text-2xl font-bold text-foreground tracking-tight">{stats.total_study_minutes_7d} <span className="text-base text-secondary font-medium">mins</span></span>
-          </div>
-        </div>
-        
-        {/* 7-Day Activity Strip */}
-        <div className="flex items-center justify-between gap-2 mb-8 px-2 md:px-8">
-          {stats.study_trend.map((day, i) => {
-            const isActive = day.minutes > 0;
-            return (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <div 
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-accent text-white shadow-glow-accent scale-110' 
-                      : 'border-2 border-border-glass text-secondary bg-surface-strong'
-                  }`}
-                  title={`${day.minutes} mins`}
-                >
-                  {isActive ? <CheckCircle2 className="w-5 h-5 text-white" /> : <span className="opacity-50">-</span>}
-                </div>
-                <span className="text-[10px] uppercase text-secondary font-medium tracking-wider">{day.date}</span>
-              </div>
-            );
-          })}
-        </div>
-        
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={studyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorMinutes" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ff8a3d" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#ff8a3d" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 12 }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 12 }} />
-              <Tooltip 
-                contentStyle={{ 
-                  borderRadius: '16px', 
-                  border: '1px solid rgba(255,255,255,0.10)', 
-                  background: 'rgba(20,20,25,0.95)', 
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                  fontSize: '13px',
-                  color: '#fafafa',
-                }}
-              />
-              <Area type="monotone" dataKey="minutes" stroke="#ff8a3d" strokeWidth={3} fillOpacity={1} fill="url(#colorMinutes)" activeDot={{ r: 6, fill: '#ff8a3d', stroke: '#fff', strokeWidth: 2 }} />
-            </AreaChart>
-          </ResponsiveContainer>
         </div>
       </div>
     </div>

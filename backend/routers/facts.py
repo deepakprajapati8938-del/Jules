@@ -119,4 +119,38 @@ def get_flashcards(subject: Optional[str] = None, chapter: Optional[str] = None,
         ]
         
     random.shuffle(facts) # Final shuffle so primary chapter cards are mixed in
-    return [FactOut(**f) for f in facts[:10]]
+    selected_facts = facts[:10]
+    
+    # Translate facts to engaging Hinglish using ultra-fast LLM
+    try:
+        import json
+        from src.llm_wrapper import call_llm
+        
+        system_prompt = (
+            "You are a fun, friendly NEET tutor. Rewrite the following JSON array of NCERT facts "
+            "into engaging 'Hinglish' (a conversational mix of Hindi and English, written in Latin script). "
+            "Keep the core scientific terms exact and intact (don't translate biology/chemistry terms), "
+            "but make the phrasing conversational and interesting so it doesn't feel like a boring textbook. "
+            "Return ONLY a valid JSON array of strings containing the rewritten facts in the exact same order."
+        )
+        user_prompt = json.dumps([f["fact_text"] for f in selected_facts])
+        
+        response_text = call_llm(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            model_name="gemini-3.5-flash-lite",
+            max_retries=2
+        )
+        
+        cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+        hinglish_texts = json.loads(cleaned_text)
+        
+        if len(hinglish_texts) == len(selected_facts):
+            for i, f in enumerate(selected_facts):
+                f["fact_text"] = hinglish_texts[i]
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to translate flashcards to Hinglish: {e}")
+        # On failure, it will gracefully fallback to the original English text
+        
+    return [FactOut(**f) for f in selected_facts]

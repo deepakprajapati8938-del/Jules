@@ -31,7 +31,8 @@ import {
   CalendarDays,
   Settings,
   Moon,
-  CheckCircle
+  CheckCircle,
+  Sparkles
 } from 'lucide-react';
 
 type FeatureConfig = {
@@ -87,6 +88,7 @@ const FEATURES: FeatureConfig[] = [
       { title: 'Build Streaks', action: 'Log your study session daily to increase your fire 🔥 counter.', stepIcon: Flame },
       { title: 'Recovery Mode', action: 'Missed a day? Don\'t panic. Click the violet Recovery card to gently restart.', stepIcon: ShieldAlert },
       { title: 'Read NCERT Bytes', action: 'Check the glowing amber box daily for a high-yield NCERT fact.', stepIcon: Zap },
+      { title: 'Quick MCQ', action: 'Test your memory with the One Quick MCQ widget right next to your Daily Byte. Limited to 3 per session to keep it pressure-free.', stepIcon: Target },
       { title: 'Track Progress', action: 'Watch the circular progress bar grow as you master high-weightage chapters.', stepIcon: TrendingUp }
     ]
   },
@@ -123,10 +125,10 @@ const FEATURES: FeatureConfig[] = [
     icon: Layers,
     colorClass: 'text-orange-400',
     glowClass: 'shadow-[0_0_16px_rgba(251,146,60,0.2)]',
-    shortDesc: 'Swipe through smart 10-card decks to revise fast.',
+    shortDesc: 'Swipe through smart Hinglish flashcards to revise fast.',
     steps: [
-      { title: 'Smart Decks', action: 'The deck automatically prioritizes facts from chapters you recently studied.', stepIcon: SparklesIcon },
-      { title: 'Tap to Flip', action: 'Read the Topic/Chapter on the front, tap to reveal the hidden fact.', stepIcon: MousePointerClick },
+      { title: 'Smart Priority', action: 'The deck automatically prioritizes facts from chapters you recently logged in Daily Log or marked as low confidence.', stepIcon: SparklesIcon },
+      { title: 'Tap to Flip', action: 'Read the Topic on the front, tap to reveal the hidden fact written in engaging Hinglish so it doesn\'t feel like a boring textbook.', stepIcon: MousePointerClick },
       { title: 'Rate Difficulty', action: 'Mark cards as Hard, Okay, or Easy to help Jules understand your prep level.', stepIcon: CheckCircle }
     ]
   },
@@ -194,6 +196,19 @@ const FEATURES: FeatureConfig[] = [
       { title: 'Official Syllabus', action: 'View all 48 chapters for NEET UG 2027 neatly categorized.', stepIcon: ListChecks },
       { title: 'Excluded Chapters', action: 'See exactly which chapters are excluded based on the latest NTA guidelines.', stepIcon: ShieldAlert },
       { title: 'Progress Check', action: 'Track what you have completed versus what is pending.', stepIcon: TrendingUp }
+    ]
+  },
+  {
+    id: 'global-orb',
+    title: 'Global Ask Jules',
+    icon: Sparkles,
+    colorClass: 'text-violet-400',
+    glowClass: 'shadow-[0_0_16px_rgba(139,92,246,0.2)]',
+    shortDesc: 'Drag the glowing orb anywhere to ask a quick doubt.',
+    steps: [
+      { title: 'Drag & Drop', action: 'Click and hold the glowing violet orb at the bottom right to drag it freely across the screen.', stepIcon: MousePointerClick },
+      { title: 'Quick Doubts', action: 'Click the orb to open a mini chat panel. Type a quick NCERT doubt anytime without leaving your current page.', stepIcon: Zap },
+      { title: 'Instant Answers', action: 'Get beautifully formatted answers with markdown and math equations rendered instantly.', stepIcon: BookOpen }
     ]
   },
   {

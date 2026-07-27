@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../core/api-client';
 import StreakResetRitual from '../features/streak/StreakResetRitual';
-import QuickLookup from '../components/QuickLookup';
+import GlobalAskJules from '../components/GlobalAskJules';
 
 const NAV_ITEMS = [
   { to: "/chat", label: "NCERT Chat", icon: MessageSquareText },
@@ -91,7 +91,6 @@ export function AppShell() {
         </div>
         
         <div className="flex items-center gap-3">
-          <QuickLookup />
           {streak !== null && (
             <div className="text-sm font-medium flex items-center gap-1.5 bg-accent-tint text-accent px-2.5 py-1 rounded-lg border border-accent/20">
               🔥 {streak}
@@ -167,6 +166,9 @@ export function AppShell() {
       {pendingRitual && (
         <StreakResetRitual onComplete={() => setPendingRitual(false)} />
       )}
+
+      {/* Global Ask Jules */}
+      <GlobalAskJules />
 
       {/* Gentle Exit Message */}
       {showExitMessage && (
