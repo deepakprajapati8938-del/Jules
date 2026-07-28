@@ -180,11 +180,28 @@ export interface StudyTrend {
   minutes: number;
 }
 
+export interface DashboardStatsOut {
+  progress_percentage: number;
+  study_trend: Array<{ date: string; minutes: number }>;
+  total_study_minutes_7d: number;
+  neglected_chapters: string[];
+  subject_balance: {
+    physics: number;
+    chemistry: number;
+    biology: number;
+  };
+}
+
 export interface DashboardStats {
   progress_percentage: number;
   study_trend: { date: string; minutes: number }[];
   total_study_minutes_7d: number;
   neglected_chapters: string[];
+  subject_balance: {
+    physics: number;
+    chemistry: number;
+    biology: number;
+  };
 }
 
 export interface QuickMCQResponse {

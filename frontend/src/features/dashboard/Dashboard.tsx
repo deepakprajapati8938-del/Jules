@@ -3,21 +3,28 @@ import { LayoutDashboard, CheckCircle2, Flame, HeartHandshake, Lightbulb, Calend
 import { apiClient } from '../../core/api-client';
 import type { FactOut } from '../../core/api-client';
 import { calculateStreak, type StreakData } from '../../utils/streak-calculator';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import QuickMCQWidget from './QuickMCQWidget';
 
+const DASHBOARD_AFFIRMATIONS = [
+  "You are capable of mastering this material.",
+  "Every small step brings you closer to your goal.",
+  "Your dedication today will pay off tomorrow.",
+  "Take it one concept at a time.",
+  "You have what it takes to succeed.",
+];
+
 export default function Dashboard() {
+  const [dailyAffirmation] = useState(() => DASHBOARD_AFFIRMATIONS[Math.floor(Math.random() * DASHBOARD_AFFIRMATIONS.length)]);
+  
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Good morning! Ready for a light review?";
+    if (hour >= 12 && hour < 17) return "Good afternoon! Keep up the momentum.";
+    if (hour >= 17 && hour < 22) return "Good evening! Great job showing up today.";
+    return "Late night study? Remember to rest!";
+  };
+
   const [confidenceStats, setConfidenceStats] = useState({
     confident: 0,
     comfortable: 0,
@@ -38,7 +45,8 @@ export default function Dashboard() {
       { date: 'Sun', minutes: 0 },
     ],
     total_study_minutes_7d: 0,
-    neglected_chapters: [] as string[]
+    neglected_chapters: [] as string[],
+    subject_balance: { physics: 0, chemistry: 0, biology: 0 }
   });
 
   const [streakData, setStreakData] = useState<StreakData | null>(null);
@@ -80,44 +88,35 @@ export default function Dashboard() {
   ].filter(d => d.value > 0);
 
   return (
-    <div className="h-full overflow-y-auto pb-24 scrollbar-hide p-4 md:p-8 max-w-5xl mx-auto w-full">
-      <div className="flex items-center justify-between mb-8">
+    <div className="h-full overflow-y-auto pb-24 scrollbar-hide p-4 md:p-8 max-w-5xl mx-auto w-full relative">
+      {/* Animated Ambient Background */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-violet/5 rounded-full blur-[100px] pointer-events-none animate-pulse-slow" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-400/5 rounded-full blur-[100px] pointer-events-none animate-pulse-slow" style={{ animationDelay: '2s' }} />
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 relative z-10">
         <div className="flex items-center gap-3">
-          <LayoutDashboard className="w-8 h-8 text-foreground" />
-          <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
+          <LayoutDashboard className="w-8 h-8 text-foreground hidden sm:block" />
+          <div>
+            <h2 className="text-2xl font-semibold text-foreground tracking-tight">{getGreeting()}</h2>
+            <p className="text-secondary text-sm mt-1 uppercase tracking-wider">Your Personal Dashboard</p>
+          </div>
         </div>
         {streakData && streakData.currentStreak > 0 && (
-          <div className="flex items-center gap-2 glass-strong px-4 py-2 rounded-full shadow-glow-accent-sm border border-accent/20">
+          <div className="flex items-center gap-2 glass-strong px-4 py-2 rounded-full shadow-glow-accent-sm border border-accent/20 shrink-0">
             <Flame className="w-5 h-5 text-accent animate-pulse" />
             <span className="text-foreground font-bold">{streakData.currentStreak} Day Streak!</span>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {dailyFact && (
-          <div className="glass rounded-2xl p-5 shadow-glass-sm border-l-4 border-l-amber-400 relative overflow-hidden group h-full flex flex-col">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
-              <Lightbulb className="w-16 h-16 text-amber-400" />
-            </div>
-            <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center gap-2 mb-3">
-                <Lightbulb className="w-5 h-5 text-amber-400" />
-                <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider">NCERT Daily Byte</h3>
-              </div>
-              <p className="text-foreground/90 font-medium md:text-lg leading-relaxed flex-1">
-                "{dailyFact.fact_text}"
-              </p>
-              <div className="mt-4 text-xs text-secondary font-medium">
-                Source: {dailyFact.chapter_name} • {dailyFact.subject}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <QuickMCQWidget />
+      {/* Daily Affirmation Widget - Styled cleaner without borders/orbs */}
+      <div className="mb-6 py-4 px-6 glass-strong rounded-2xl border border-white/5 flex items-center justify-center text-center relative overflow-hidden bg-gradient-to-r from-violet/5 via-surface/50 to-amber-400/5 shadow-sm">
+        <p className="text-sm md:text-base font-medium text-foreground/80 tracking-wide z-10">
+          "<span className="italic">{dailyAffirmation}</span>"
+        </p>
       </div>
 
+      {/* Alerts (Neglected Chapters / Recovery) */}
       {stats.neglected_chapters && stats.neglected_chapters.length > 0 && (
         <div className="mb-6 p-5 glass-strong rounded-2xl border border-secondary/20 shadow-glass-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-up">
           <div className="flex items-center gap-3">
@@ -152,8 +151,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Study Time Chart & Activity Strip (Full Width, Moved Up) */}
-      <div className="glass rounded-3xl p-6 lg:p-8 mb-6">
+      {/* Study Time Chart & Activity Strip (Moved Up) */}
+      <div className="glass rounded-3xl p-6 lg:p-8 mb-6 relative z-10">
         <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="font-semibold text-foreground tracking-tight text-lg mb-1">Study Time Trend</h3>
@@ -214,7 +213,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      {/* Grid 2: Progress, Balance, Confidence */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 relative z-10">
         
         {/* Completion Progress */}
         <div className="glass rounded-3xl p-6 flex flex-col items-center text-center lg:col-span-1">
@@ -255,14 +255,50 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Subject Balance Indicator */}
+        <div className="glass rounded-3xl p-6 flex flex-col justify-center lg:col-span-1">
+          <h3 className="font-semibold text-foreground mb-1 tracking-tight">Subject Balance</h3>
+          <p className="text-xs text-secondary mb-6 tracking-wide">PAST 7 DAYS TIME RATIO</p>
+          
+          <div className="space-y-4 w-full">
+            {[
+              { label: 'Biology', val: stats.subject_balance?.biology || 0, color: 'bg-emerald-400', glow: 'shadow-[0_0_12px_rgba(52,211,153,0.5)]' },
+              { label: 'Chemistry', val: stats.subject_balance?.chemistry || 0, color: 'bg-amber-400', glow: 'shadow-[0_0_12px_rgba(251,191,36,0.5)]' },
+              { label: 'Physics', val: stats.subject_balance?.physics || 0, color: 'bg-violet', glow: 'shadow-[0_0_12px_rgba(139,92,246,0.5)]' },
+            ].map(subj => {
+              const total = (stats.subject_balance?.biology || 0) + (stats.subject_balance?.chemistry || 0) + (stats.subject_balance?.physics || 0);
+              const pct = total > 0 ? (subj.val / total) * 100 : 0;
+              return (
+                <div key={subj.label} className="w-full">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium text-secondary">{subj.label}</span>
+                    <span className="text-foreground font-semibold">{subj.val} m</span>
+                  </div>
+                  <div className="w-full h-2 bg-surface-strong rounded-full overflow-hidden border border-border-glass">
+                    <div 
+                      className={`h-full ${subj.color} ${subj.glow} rounded-full transition-all duration-1000`}
+                      style={{ width: `${Math.max(pct, 5)}%` }} // Minimum 5% width so it's visible
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-secondary mt-5 text-center leading-relaxed">
+            {(stats.subject_balance?.physics || 0) > 0 || (stats.subject_balance?.biology || 0) > 0 || (stats.subject_balance?.chemistry || 0) > 0
+              ? "A balanced diet of PCB is key to success! Keep mixing it up."
+              : "No study time recorded yet this week."}
+          </p>
+        </div>
+
         {/* Confidence Breakdown */}
-        <div className="glass rounded-3xl p-6 flex flex-col lg:col-span-2">
+        <div className="glass rounded-3xl p-6 flex flex-col lg:col-span-1">
           <div className="text-center md:text-left mb-4">
             <h3 className="font-semibold text-foreground mb-1 tracking-tight">Chapter Confidence</h3>
             <p className="text-xs text-secondary tracking-wide uppercase">Distribution across syllabus</p>
           </div>
-          <div className="flex-1 min-h-[200px] flex flex-col md:flex-row items-center justify-center gap-8">
-            <div className="w-full md:w-1/2 h-48 relative">
+          <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center gap-8">
+            <div className="w-full h-48 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -294,11 +330,11 @@ export default function Dashboard() {
             </div>
             
             {/* Legend as structured list */}
-            <div className="w-full md:w-1/2 flex flex-col justify-center gap-3">
+            <div className="w-full flex flex-col justify-center gap-2">
               {confidenceData.map((entry) => (
-                <div key={entry.name} className="flex items-center justify-between text-sm glass-strong px-4 py-2 rounded-xl">
+                <div key={entry.name} className="flex items-center justify-between text-xs glass-strong px-3 py-1.5 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color, boxShadow: `0 0 8px ${entry.color}80` }} />
+                    <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color, boxShadow: `0 0 8px ${entry.color}80` }} />
                     <span className="text-secondary font-medium">{entry.name}</span>
                   </div>
                   <span className="text-foreground font-semibold">{entry.value}</span>
@@ -308,6 +344,32 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Grid 1: Daily Byte + MCQ (Moved Down) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
+        {dailyFact && (
+          <div className="glass rounded-2xl p-5 shadow-glass-sm border-l-4 border-l-amber-400 relative overflow-hidden group h-full flex flex-col">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+              <Lightbulb className="w-16 h-16 text-amber-400" />
+            </div>
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-3">
+                <Lightbulb className="w-5 h-5 text-amber-400" />
+                <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider">NCERT Daily Byte</h3>
+              </div>
+              <p className="text-foreground/90 font-medium md:text-lg leading-relaxed flex-1">
+                "{dailyFact.fact_text}"
+              </p>
+              <div className="mt-4 text-xs text-secondary font-medium">
+                Source: {dailyFact.chapter_name} • {dailyFact.subject}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <QuickMCQWidget />
+      </div>
+
     </div>
   );
 }

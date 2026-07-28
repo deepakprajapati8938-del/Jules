@@ -13,18 +13,25 @@ class StudyTrend(BaseModel):
     date: str
     minutes: int
 
+class SubjectBalance(BaseModel):
+    physics: int
+    chemistry: int
+    biology: int
+
 class DashboardStatsResponse(BaseModel):
     progress_percentage: int
     study_trend: list[StudyTrend]
     total_study_minutes_7d: int
     neglected_chapters: list[str]
+    subject_balance: SubjectBalance
 
 @router.get("/stats", response_model=DashboardStatsResponse)
 def get_dashboard_stats(sb: Client = Depends(get_supabase)):
     # 1. Calculate Marks-Weighted Progress
     # Get all included chapters and their weightage
-    syl_res = sb.table("syllabus_config").select("chapter_name, weightage_marks").eq("included", True).execute()
+    syl_res = sb.table("syllabus_config").select("chapter_name, subject, weightage_marks").eq("included", True).execute()
     syl_chapters = {r["chapter_name"]: (r["weightage_marks"] or 0) for r in (syl_res.data or [])}
+    syl_subjects = {r["chapter_name"]: r["subject"] for r in (syl_res.data or [])}
     
     # Get user confidence
     conf_res = sb.table("chapter_confidence").select("chapter_name, status").execute()
@@ -47,33 +54,23 @@ def get_dashboard_stats(sb: Client = Depends(get_supabase)):
     now = datetime.now(timezone.utc)
     seven_days_ago = now - timedelta(days=6)
     
-    # Fetch test attempts in last 7 days
-    attempts_res = sb.table("test_attempts").select("id, started_at").gte("started_at", seven_days_ago.isoformat()).execute()
-    attempt_ids = [a["id"] for a in (attempts_res.data or [])]
-    
-    attempt_times = {} # attempt_id -> date string (e.g. "Mon")
-    for a in (attempts_res.data or []):
-        dt = datetime.fromisoformat(a["started_at"].replace('Z', '+00:00'))
-        day_str = dt.strftime("%a") # "Mon", "Tue"
-        attempt_times[a["id"]] = day_str
-        
     study_by_day = { (now - timedelta(days=i)).strftime("%a"): 0 for i in range(6, -1, -1) }
-    
-    if attempt_ids:
-        # Fetch question attempts for these tests
-        q_res = sb.table("question_attempts").select("test_attempt_id, time_taken_seconds").in_("test_attempt_id", attempt_ids).execute()
-        for q in (q_res.data or []):
-            day_str = attempt_times.get(q["test_attempt_id"])
-            if day_str in study_by_day:
-                study_by_day[day_str] += (q["time_taken_seconds"] or 0)
+    subject_times = {"Physics": 0, "Chemistry": 0, "Biology": 0}
                 
     # Also fetch manual study sessions from daily log
-    sessions_res = sb.table("study_sessions").select("created_at, time_spent_mins").gte("created_at", seven_days_ago.isoformat()).execute()
+    sessions_res = sb.table("study_sessions").select("created_at, time_spent_mins, subject, chapter_name").gte("created_at", seven_days_ago.isoformat()).execute()
     for s in (sessions_res.data or []):
         dt = datetime.fromisoformat(s["created_at"].replace('Z', '+00:00'))
         day_str = dt.strftime("%a")
         if day_str in study_by_day:
-            study_by_day[day_str] += (s["time_spent_mins"] or 0) * 60  # convert mins to seconds for addition
+            time_sec = (s["time_spent_mins"] or 0) * 60
+            study_by_day[day_str] += time_sec
+            
+            subj = s.get("subject")
+            if not subj and s.get("chapter_name"):
+                subj = syl_subjects.get(s.get("chapter_name"))
+            if subj in ["Physics", "Chemistry", "Biology"]:
+                subject_times[subj] += time_sec
                 
     study_trend = []
     total_minutes_7d = 0
@@ -106,7 +103,12 @@ def get_dashboard_stats(sb: Client = Depends(get_supabase)):
         progress_percentage=progress,
         study_trend=ordered_trend,
         total_study_minutes_7d=total_minutes_7d,
-        neglected_chapters=neglected_chapters
+        neglected_chapters=neglected_chapters,
+        subject_balance=SubjectBalance(
+            physics=int(subject_times.get("Physics", 0) // 60),
+            chemistry=int(subject_times.get("Chemistry", 0) // 60),
+            biology=int(subject_times.get("Biology", 0) // 60)
+        )
     )
 
 class QuickMCQResponse(BaseModel):
