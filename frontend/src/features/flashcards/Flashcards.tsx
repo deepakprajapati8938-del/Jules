@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Layers, RotateCw, ThumbsUp, ThumbsDown, BookOpen, Loader2, Sparkles } from 'lucide-react';
 import { apiClient } from '../../core/api-client';
 import type { FactOut } from '../../core/api-client';
+import { vibrate } from '../../core/haptics';
 
 export default function Flashcards() {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -22,6 +23,7 @@ export default function Flashcards() {
 
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
+    vibrate(20);
     setIsFlipped(false);
     setTimeout(() => {
       setCurrentCard((prev) => (prev + 1) % cards.length);

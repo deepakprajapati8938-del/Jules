@@ -13,6 +13,8 @@ const AFFIRMATIONS = [
 export default function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [affirmation] = useState(() => AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
   const [isFadingOut, setIsFadingOut] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState('Waking up Jules...');
 
   useEffect(() => {
     // Start fading out at 3 seconds
@@ -25,9 +27,22 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
       onComplete();
     }, 3500);
 
+    // Progress bar animation (100 steps * 30ms = 3000ms)
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) return 100;
+        const next = prev + 1;
+        if (next === 30) setStatusText('Syncing study streaks...');
+        if (next === 70) setStatusText('Preparing your dashboard...');
+        if (next === 95) setStatusText('Ready to go!');
+        return next;
+      });
+    }, 30);
+
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(completeTimer);
+      clearInterval(progressInterval);
     };
   }, [onComplete]);
 
@@ -59,6 +74,19 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
         <p className="text-xl font-light text-foreground/80 tracking-wide leading-relaxed italic drop-shadow-sm px-4">
           "{affirmation}"
         </p>
+      </div>
+
+      {/* Dynamic Progress Indicator */}
+      <div className="absolute bottom-12 w-64 flex flex-col items-center gap-3 z-10 transition-opacity duration-500">
+        <p className="text-[11px] text-secondary uppercase tracking-[0.2em] font-semibold animate-pulse">
+          {statusText}
+        </p>
+        <div className="w-full bg-surface-strong rounded-full h-1 border border-border-glass overflow-hidden shadow-glass-inset">
+          <div 
+            className="bg-accent h-full rounded-full transition-all duration-75 ease-linear shadow-[0_0_10px_rgba(255,138,61,0.5)]" 
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
     </div>
   );

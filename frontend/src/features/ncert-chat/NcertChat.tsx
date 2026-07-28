@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { vibrate } from '../../core/haptics';
 import ArtifactRenderer from '../../components/ArtifactRenderer';
 import HistorySidebar from '../../components/HistorySidebar';
 import InteractiveWidget from '../../components/InteractiveWidget';
@@ -20,6 +21,7 @@ interface Message {
   chunks?: ChatResponse['chunks'];
   isLoading?: boolean;
   widget_html?: string;
+  attachment?: { data: string; type: string; name: string };
 }
 
 const preprocessMath = (text: string) => {
@@ -162,9 +164,16 @@ export default function NcertChat() {
   }, [input]);
 
   const handleSend = async () => {
-    if (!input.trim() || isSending) return;
+    if ((!input.trim() && !attachment) || isSending) return;
+    vibrate(30);
     
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input.trim(), created_at: new Date().toISOString() };
+    const userMsg: Message = { 
+      id: Date.now().toString(), 
+      role: 'user', 
+      content: input.trim(), 
+      created_at: new Date().toISOString(),
+      attachment: attachment ? { ...attachment } : undefined
+    };
     const loadingMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: '', isLoading: true, created_at: new Date().toISOString() };
     
     setMessages(prev => [...prev, userMsg, loadingMsg]);
@@ -283,8 +292,20 @@ export default function NcertChat() {
                 <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} w-full`}>
                   {msg.role === 'user' ? (
                     <div className="flex flex-col items-end gap-1">
-                      <div className="max-w-[85%] px-5 py-3.5 text-[15px] leading-relaxed shadow-glass-inset bg-surface-strong border border-border-glass rounded-3xl rounded-br-sm text-foreground">
-                        {msg.content}
+                      <div className="max-w-[85%] px-5 py-3.5 text-[15px] leading-relaxed shadow-glass-inset bg-surface-strong border border-border-glass rounded-3xl rounded-br-sm text-foreground flex flex-col gap-3">
+                        {msg.attachment && (
+                          <div className="w-full max-w-sm rounded-xl overflow-hidden border border-border-glass">
+                            {msg.attachment.type === 'application/pdf' ? (
+                              <div className="flex items-center gap-2 p-3 bg-background">
+                                <FileText className="w-5 h-5 text-red-400" />
+                                <span className="text-sm font-medium truncate">{msg.attachment.name}</span>
+                              </div>
+                            ) : (
+                              <img src={msg.attachment.data} alt="attachment" className="w-full h-auto object-cover max-h-[300px]" />
+                            )}
+                          </div>
+                        )}
+                        {msg.content && <div>{msg.content}</div>}
                       </div>
                       <button 
                         onClick={() => handleCopy(msg.id, msg.content)}
@@ -438,7 +459,7 @@ export default function NcertChat() {
             onChange={handleFileChange}
           />
 
-          <div className="flex-1 flex flex-col justify-end min-h-[44px]">
+          <div className="flex-1 min-w-0 flex flex-col justify-end min-h-[44px]">
             {attachment && (
               <div className="flex items-center gap-2 mb-2 p-1.5 pr-3 bg-surface border border-border-glass rounded-lg self-start max-w-full">
                 <div className="w-10 h-10 rounded overflow-hidden shrink-0 bg-background flex items-center justify-center">

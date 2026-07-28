@@ -163,6 +163,13 @@
   - Added `Handbook.tsx` with a premium Dark Glassmorphism Bento grid layout.
   - Implemented interactive modal cards for core features (NCERT Chat, CBT Tests, Concept Map, Journal).
   - Added `/guide` route and wired it to the AppShell sidebar.
+- [x] **Phase 13 (Offline Resilience & Premium UX):** Native-like PWA capabilities
+  - Implemented `jules_offline_queue` in `api-client.ts` to silently save test submissions and daily logs during network drops.
+  - Wired `AppShell.tsx` to automatically flush the offline queue upon reconnecting to the internet.
+  - Added background pre-caching for Syllabus Tracker and Daily Log on startup to ensure instant offline availability.
+  - Added Haptic Feedback (`navigator.vibrate`) for tests, flashcards, and chat sends for a premium tactile feel.
+  - Added PWA Manifest Home Screen Shortcuts (NCERT Chat, Mock Test, Daily Log).
+  - Prevented accidental "Pull-to-Refresh" data loss via CSS `overscroll-behavior-y`.
 - [ ] Diagram captioning (DEFERRED) — requires paid Vision API tier. Images extracted but no captions. Will add later. Free tier quotas make batch processing impractical.
 - [x] **Vercel Deployment Fixes (2026-07-27):** Fixed 3 bugs that caused failures after Vercel/production deploy:
   - `backend/routers/tests.py`: Fixed JSONB filter operators `->` → `->>` for chapter, subject, and source_type metadata fields. The `->` operator returns raw JSON (quoted), while `->>` returns plain text — Supabase `eq` filter only matches text, so chapter-wise and subject-wise tests returned 0 questions on production.

@@ -17,7 +17,7 @@ import {
   ListChecks,
   BookOpen,
 } from 'lucide-react';
-import { apiClient } from '../core/api-client';
+import { apiClient, flushOfflineQueue } from '../core/api-client';
 import StreakResetRitual from '../features/streak/StreakResetRitual';
 import GlobalAskJules from '../components/GlobalAskJules';
 
@@ -42,6 +42,7 @@ export function AppShell() {
   const [streak, setStreak] = useState<number | null>(null);
   const [pendingRitual, setPendingRitual] = useState(false);
   const [showExitMessage, setShowExitMessage] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const location = useLocation();
 
   const pageTitle = useMemo(() => {
@@ -55,6 +56,13 @@ export function AppShell() {
       setStreak(data.current_streak);
       setPendingRitual(data.pending_reset_ritual);
     }).catch(console.error);
+    
+    // Background pre-caching for offline readiness
+    if (navigator.onLine) {
+      apiClient.syllabusTracker.get().catch(() => {});
+      apiClient.dailyLog.getHistory().catch(() => {});
+      flushOfflineQueue();
+    }
 
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
@@ -63,8 +71,21 @@ export function AppShell() {
       }
     };
     
+    const handleOnline = () => {
+      setIsOffline(false);
+      flushOfflineQueue();
+    };
+    const handleOffline = () => setIsOffline(true);
+    
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -98,6 +119,14 @@ export function AppShell() {
           )}
         </div>
       </header>
+
+      {/* Offline Indicator */}
+      {isOffline && (
+        <div className="bg-rose-500/10 border-b border-rose-500/20 px-4 py-1.5 flex items-center justify-center gap-2 shrink-0 relative z-20 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          <span className="text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em]">Device Offline</span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden relative">

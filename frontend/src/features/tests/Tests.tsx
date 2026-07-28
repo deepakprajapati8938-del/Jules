@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { PenTool, Clock, CheckCircle2, ChevronRight, ChevronLeft, Grid3X3, Loader2 } from 'lucide-react';
 import CustomSelect from '../../components/CustomSelect';
-import { apiClient } from '../../core/api-client';
+import { apiClient, OfflineSubmitError } from '../../core/api-client';
 import type { TestOut, TestQuestion, SubmitResult, FactOut } from '../../core/api-client';
+import { vibrate } from '../../core/haptics';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { NEET_SYLLABUS } from '../../core/syllabus';
 
 export default function Tests() {
-  const [testState, setTestState] = useState<'setup' | 'taking' | 'summary' | 'review'>('setup');
+  const [testState, setTestState] = useState<'setup' | 'taking' | 'summary' | 'review' | 'offline_summary'>('setup');
   const [showPalette, setShowPalette] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60 * 60); // default 60 mins
   
@@ -107,6 +108,7 @@ export default function Tests() {
 
   const handleOptionSelect = (opt: string) => {
     if (!testData) return;
+    vibrate(15); // Light tick for selecting option
     const qId = testData.questions[currentIndex].id;
     setAnswers(prev => ({
       ...prev,
@@ -134,6 +136,7 @@ export default function Tests() {
 
   const changeQuestion = (newIndex: number) => {
     if (!testData) return;
+    vibrate(10); // Very light tick for changing questions
     setCurrentIndex(newIndex);
     const qId = testData.questions[newIndex].id;
     setAnswers(prev => ({
@@ -144,6 +147,7 @@ export default function Tests() {
 
   const handleSubmit = async () => {
     if (!testData) return;
+    vibrate([50, 50, 100]); // Heavier success vibration for submit
     setIsLoading(true);
     try {
       // Mocking time_taken_seconds to 0 for now since we aren't tracking per-question time precisely
@@ -157,9 +161,13 @@ export default function Tests() {
       const result = await apiClient.tests.submit(testData.test_id, payload);
       setSubmitResult(result);
       setTestState('summary');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to submit test.');
+      if (err instanceof OfflineSubmitError || err.name === 'OfflineSubmitError') {
+        setTestState('offline_summary');
+      } else {
+        alert('Failed to submit test.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -439,6 +447,37 @@ export default function Tests() {
               Done
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (testState === 'offline_summary') {
+    return (
+      <div className="h-full overflow-y-auto pb-24 scrollbar-hide p-4 md:p-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+        <div className="glass-strong rounded-[2rem] p-10 max-w-md w-full text-center shadow-glass relative overflow-hidden">
+          <div className="absolute inset-0 bg-rose-500/5 pointer-events-none" />
+          <div className="w-20 h-20 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+            <span className="absolute top-0 right-0 w-4 h-4 bg-rose-500 rounded-full animate-ping" />
+            <Clock className="w-10 h-10 text-rose-400" />
+          </div>
+          <h2 className="text-[28px] tracking-tight font-bold text-foreground mb-2">Saved Offline</h2>
+          <p className="text-secondary mb-8">Your test has been saved securely on this device.</p>
+          
+          <div className="bg-surface/50 border border-border-glass p-5 rounded-2xl mb-8">
+            <p className="text-sm font-medium text-foreground mb-2">Sync Pending</p>
+            <p className="text-xs text-secondary leading-relaxed">
+              We couldn't reach the servers to calculate your score. Don't worry! 
+              The moment your internet reconnects, Jules will sync your answers in the background and your score will be available in the dashboard.
+            </p>
+          </div>
+
+          <button 
+            onClick={() => setTestState('setup')}
+            className="btn-accent w-full py-4 text-[15px]"
+          >
+            Got it, take me back
+          </button>
         </div>
       </div>
     );

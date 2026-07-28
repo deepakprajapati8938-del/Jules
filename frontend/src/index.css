@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 @layer base {
-  body {
+  html, body {
     @apply bg-background text-foreground antialiased;
     min-height: 100vh;
     min-height: 100dvh;
+    overscroll-behavior-y: none;
   }
 
   /* Cinematic light bleed with SVG noise for physical texture */

@@ -27,6 +27,100 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   return response.json() as Promise<T>;
 }
 
+// ── Smart Caching Helper ─────────────────────────────────────────────────────
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+async function fetchWithCache<T>(cacheKey: string, endpoint: string): Promise<T> {
+  const cachedStr = localStorage.getItem(cacheKey);
+  let parsedCache: { data: T, timestamp: number } | null = null;
+  
+  if (cachedStr) {
+    try {
+      parsedCache = JSON.parse(cachedStr);
+    } catch (e) {}
+  }
+
+  // If online and cache is expired, or if no cache, fetch fresh
+  if (navigator.onLine) {
+    if (!parsedCache || Date.now() - parsedCache.timestamp > CACHE_DURATION) {
+      try {
+        const data = await fetchApi<T>(endpoint);
+        localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+        return data;
+      } catch (err) {
+        if (parsedCache) return parsedCache.data; // fallback to expired cache
+        throw err;
+      }
+    }
+  }
+
+  // If offline or cache is fresh
+  if (parsedCache) {
+    return parsedCache.data;
+  }
+
+  return fetchApi<T>(endpoint);
+}
+
+export const clearDashboardCache = () => {
+  localStorage.removeItem('jules_home_data');
+  localStorage.removeItem('jules_dashboard_stats');
+};
+
+// ── Offline Queue ────────────────────────────────────────────────────────────
+
+export class OfflineSubmitError extends Error {
+  constructor() {
+    super('OFFLINE_SUBMIT');
+    this.name = 'OfflineSubmitError';
+  }
+}
+
+interface OfflineAction {
+  id: string;
+  endpoint: string;
+  method: string;
+  body: any;
+  timestamp: number;
+}
+
+export const pushToOfflineQueue = (endpoint: string, method: string, body: any) => {
+  const queue = JSON.parse(localStorage.getItem('jules_offline_queue') || '[]') as OfflineAction[];
+  queue.push({
+    id: Date.now().toString(),
+    endpoint,
+    method,
+    body,
+    timestamp: Date.now()
+  });
+  localStorage.setItem('jules_offline_queue', JSON.stringify(queue));
+};
+
+export const flushOfflineQueue = async () => {
+  if (!navigator.onLine) return;
+  
+  const queue = JSON.parse(localStorage.getItem('jules_offline_queue') || '[]') as OfflineAction[];
+  if (queue.length === 0) return;
+  
+  // Clear immediately to prevent duplicate submissions
+  localStorage.removeItem('jules_offline_queue');
+  
+  for (const action of queue) {
+    try {
+      await fetchApi(action.endpoint, {
+        method: action.method,
+        body: action.body ? JSON.stringify(action.body) : undefined
+      });
+    } catch (e) {
+      console.error('Failed to sync offline action:', action, e);
+    }
+  }
+  
+  // Clear caches since we synced modifications
+  clearDashboardCache();
+};
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface ChunkOut {
@@ -216,12 +310,14 @@ export interface SubjectProgress {
 
 export const apiClient = {
   dailyLog: {
-    logSession: (subject: string, chapter_name: string, time_spent_mins: number, notes?: string) =>
-      fetchApi<StudySession>('/daily-log', {
+    logSession: (subject: string, chapter_name: string, time_spent_mins: number, notes?: string) => {
+      clearDashboardCache();
+      return fetchApi<StudySession>('/daily-log', {
         method: 'POST',
         body: JSON.stringify({ subject, chapter_name, time_spent_mins, notes }),
-      }),
-    getHistory: () => fetchApi<StudySession[]>('/daily-log/history'),
+      });
+    },
+    getHistory: () => fetchWithCache<StudySession[]>('jules_daily_log_history', '/daily-log/history'),
   },
   chat: {
     sendNcertMessage: (question: string, session_id?: string, attachment_data?: string, attachment_mime_type?: string, require_graph?: boolean) => 
@@ -250,10 +346,10 @@ export const apiClient = {
     }),
   },
   home: {
-    getData: () => fetchApi<HomeData>('/home/data'),
+    getData: () => fetchWithCache<HomeData>('jules_home_data', '/home/data'),
   },
   dashboard: {
-    getStats: () => fetchApi<DashboardStats>('/dashboard/stats'),
+    getStats: () => fetchWithCache<DashboardStats>('jules_dashboard_stats', '/dashboard/stats'),
     getQuickMCQ: () => fetchApi<QuickMCQResponse>('/dashboard/quick-mcq'),
   },
   streak: {
@@ -304,11 +400,21 @@ export const apiClient = {
       return response.json() as Promise<TestOut>;
     },
     getTest: (test_id: number) => fetchApi<TestQuestion[]>(`/tests/${test_id}`),
-    submit: (test_id: number, answers: Array<{ question_id: number; chosen_ans: string | null; time_taken_seconds: number }>) =>
-      fetchApi<SubmitResult>(`/tests/${test_id}/submit`, {
-        method: 'POST',
-        body: JSON.stringify({ answers }),
-      }),
+    submit: async (test_id: number, answers: Array<{ question_id: number; chosen_ans: string | null; time_taken_seconds: number }>) => {
+      clearDashboardCache();
+      try {
+        return await fetchApi<SubmitResult>(`/tests/${test_id}/submit`, {
+          method: 'POST',
+          body: JSON.stringify({ answers }),
+        });
+      } catch (err: any) {
+        if (!navigator.onLine || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+          pushToOfflineQueue(`/tests/${test_id}/submit`, 'POST', { answers });
+          throw new OfflineSubmitError();
+        }
+        throw err;
+      }
+    },
     tagMistake: (test_id: number, question_id: number, mistake_type: string) =>
       fetchApi<{ question_id: number; mistake_type: string }>(`/tests/${test_id}/questions/${question_id}/mistake`, {
         method: 'PATCH',
@@ -328,16 +434,37 @@ export const apiClient = {
   },
   facts: {
     getRandom: (count = 1) => fetchApi<FactOut[]>(`/facts/random?count=${count}`),
-    getFlashcards: (subject?: string, chapter?: string) => {
+    getFlashcards: async (subject?: string, chapter?: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      const cacheKey = `jules_daily_flashcards_${today}`;
+      
+      // Return cached flashcards for today if no specific subject/chapter requested
+      if (!subject && !chapter) {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached) as FactOut[];
+            if (parsed && parsed.length > 0) return parsed;
+          } catch (e) {}
+        }
+      }
+
       const params = new URLSearchParams();
       if (subject) params.append('subject', subject);
       if (chapter) params.append('chapter', chapter);
       const qs = params.toString();
-      return fetchApi<FactOut[]>(`/facts/flashcards${qs ? `?${qs}` : ''}`);
+      
+      const data = await fetchApi<FactOut[]>(`/facts/flashcards${qs ? `?${qs}` : ''}`);
+      
+      // Save to cache if it's the daily deck
+      if (data && data.length > 0 && !subject && !chapter) {
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+      }
+      return data;
     },
   },
   syllabusTracker: {
-    get: () => fetchApi<SubjectProgress[]>('/syllabus/tracker'),
+    get: () => fetchWithCache<SubjectProgress[]>('jules_syllabus_tracker', '/syllabus/tracker'),
     toggle: (chapter_name: string, topic_name: string, is_completed: boolean) => fetchApi<any>('/syllabus/tracker/toggle', {
       method: 'POST',
       body: JSON.stringify({ chapter_name, topic_name, is_completed })
