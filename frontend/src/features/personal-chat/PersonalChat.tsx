@@ -504,7 +504,7 @@ export default function PersonalChat() {
 
           <div className="flex-1 min-w-0 flex flex-col justify-end min-h-[44px]">
             {attachment && (
-              <div className="flex items-center gap-2 mb-2 p-1.5 pr-3 bg-surface border border-border-glass rounded-lg self-start max-w-full">
+              <div className="flex items-center gap-2 mb-2 p-1.5 pr-2 bg-surface border border-border-glass rounded-lg self-start max-w-full min-w-0">
                 <div className="w-10 h-10 rounded overflow-hidden shrink-0 bg-background flex items-center justify-center">
                   {attachment.type === 'application/pdf' ? (
                     <FileText className="w-5 h-5 text-red-400" />
@@ -512,12 +512,12 @@ export default function PersonalChat() {
                     <img src={attachment.data} alt="preview" className="w-full h-full object-cover" />
                   )}
                 </div>
-                <span className="text-[11px] font-medium text-foreground truncate max-w-[120px] min-w-0 block">
+                <span className="flex-1 min-w-0 text-[11px] font-medium text-foreground truncate">
                   {attachment.name}
                 </span>
                 <button 
                   onClick={() => setAttachment(null)}
-                  className="w-6 h-6 rounded-full bg-surface-strong hover:bg-red-500/20 text-muted hover:text-red-400 flex items-center justify-center transition-colors ml-1 shrink-0 focus:outline-none"
+                  className="w-6 h-6 rounded-full bg-surface-strong hover:bg-red-500/20 text-muted hover:text-red-400 flex items-center justify-center transition-colors shrink-0 focus:outline-none"
                 >
                   <X className="w-3 h-3" />
                 </button>
