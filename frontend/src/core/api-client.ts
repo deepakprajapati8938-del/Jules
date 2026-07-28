@@ -320,10 +320,10 @@ export const apiClient = {
     getHistory: () => fetchWithCache<StudySession[]>('jules_daily_log_history', '/daily-log/history'),
   },
   chat: {
-    sendNcertMessage: (question: string, session_id?: string, attachment_data?: string, attachment_mime_type?: string, require_graph?: boolean) => 
+    sendNcertMessage: (question: string, model?: string, session_id?: string, attachment_data?: string, attachment_mime_type?: string, require_graph?: boolean) => 
       fetchApi<ChatResponse>('/chat', {
         method: 'POST',
-        body: JSON.stringify({ question, session_id, attachment_data, attachment_mime_type, require_graph }),
+        body: JSON.stringify({ question, model, session_id, attachment_data, attachment_mime_type, require_graph }),
       }),
       
     sendPersonalMessage: (message: string, model?: string, session_id?: string, attachment_data?: string, attachment_mime_type?: string, require_graph?: boolean) => 

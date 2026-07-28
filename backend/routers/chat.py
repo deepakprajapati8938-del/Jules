@@ -20,6 +20,7 @@ class ChatRequest(BaseModel):
     require_graph: bool = False
     top_k: int = DEFAULT_TOP_K
     threshold: float = DEFAULT_SIMILARITY_THRESHOLD
+    model: Optional[str] = None
 
 class ChunkOut(BaseModel):
     similarity: float
@@ -81,7 +82,8 @@ def chat(req: ChatRequest, sb: Client = Depends(get_supabase)):
             threshold=req.threshold,
             attachment_data=req.attachment_data,
             attachment_mime_type=req.attachment_mime_type,
-            require_graph=req.require_graph
+            require_graph=req.require_graph,
+            model_name=req.model
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

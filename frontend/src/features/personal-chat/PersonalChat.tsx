@@ -40,7 +40,7 @@ export default function PersonalChat() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [model, setModel] = useState<'gemini-flash-latest' | 'gemini-pro-latest' | 'llama-3.3-70b-versatile' | 'llama-3.1-8b-instant' | 'openai/gpt-oss-120b' | 'qwen/qwen3.6-27b'>('gemini-flash-latest');
+  const [model, setModel] = useState<'gemini-flash-latest' | 'gemini-pro-latest' | 'openai/gpt-oss-120b' | 'qwen/qwen3.6-27b'>('gemini-flash-latest');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [graphMode, setGraphMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,6 +51,34 @@ export default function PersonalChat() {
 
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [attachment, setAttachment] = useState<{ data: string, type: string, name: string } | null>(null);
+
+  const processImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > 1024 || height > 1024) {
+          const ratio = Math.min(1024 / width, 1024 / height);
+          width *= ratio;
+          height *= ratio;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        const base64 = canvas.toDataURL('image/jpeg', 0.6);
+        setAttachment({ data: base64, type: 'image/jpeg', name: file.name || 'pasted-image.jpg' });
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,31 +92,23 @@ export default function PersonalChat() {
       };
       reader.readAsDataURL(file);
     } else if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > 1024 || height > 1024) {
-            const ratio = Math.min(1024 / width, 1024 / height);
-            width *= ratio;
-            height *= ratio;
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          const base64 = canvas.toDataURL('image/jpeg', 0.6);
-          setAttachment({ data: base64, type: 'image/jpeg', name: file.name });
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      processImageFile(file);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          processImageFile(file);
+          e.preventDefault();
+          break;
+        }
+      }
     }
   };
 
@@ -164,12 +184,8 @@ export default function PersonalChat() {
       { id: 'gemini-flash-latest', label: 'Gemini Flash', sub: 'Fast & responsive' },
       { id: 'gemini-pro-latest', label: 'Gemini Pro', sub: 'Smart & complex' },
     ]},
-    { group: 'Groq (Ultra-Fast)', options: [
-      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', sub: 'Best open source' },
-      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B', sub: 'Fast & capable' },
-    ]},
-    { group: 'Groq (Smartest & Reasoning)', options: [
-      { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', sub: 'OpenAI behemoth' },
+    { group: 'Smartest & Reasoning', options: [
+      { id: 'openai/gpt-oss-120b', label: 'ChatGPT', sub: 'OpenAI behemoth' },
       { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', sub: 'Deep thinking & logic' },
     ]}
   ];
@@ -533,6 +549,7 @@ export default function PersonalChat() {
                   if (input.trim() || attachment) handleSend();
                 }
               }}
+              onPaste={handlePaste}
               placeholder={attachment ? "Message..." : "Message..."}
               className="w-full max-h-32 resize-none bg-transparent py-3 px-2 outline-none text-[15px] text-foreground placeholder:text-muted scrollbar-hide"
               rows={1}

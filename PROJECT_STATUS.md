@@ -176,3 +176,7 @@
   - `src/config.py`: Wrapped `OUTPUT_DIR.mkdir()` in `try/except (OSError, PermissionError)` to prevent import-time crash on Vercel's read-only serverless filesystem. This was silently crashing every backend endpoint.
   - `src/llm_wrapper.py`: Removed dead stub `call_llm` definition (had docstring only, no body). Only the real implementation at module level remains.
   - **Data Layer (Physics/Chemistry)**: Fixed the generic `ChapterX` naming issue by standardizing PDF names and re-ingesting them correctly, then re-seeding the syllabus. Chapter-wise tests for Physics and Chemistry now work as expected.
+- [x] **Phase 14 (Resilience & Chat UI Polish):** Added on 2026-07-28
+  - `src/retriever.py`: Fixed Vercel 504 serverless timeout error caused by `time.sleep()` blocking during rate limit hits when embedding images. Replaced with robust multi-key rotation `embed_with_retry` from `src/embedder.py`.
+  - `NcertChat.tsx` & `PersonalChat.tsx`: Added `onPaste` event handler to natively support clipboard image pasting (Ctrl+V) directly into the chat prompt.
+  - Added Model Switcher UI to NCERT Chat. Removed "Groq Ultra-Fast" models, renamed "GPT-OSS 120B" to "ChatGPT", and set `gemini-flash-latest` as the unified default for speed and multimodal safety.

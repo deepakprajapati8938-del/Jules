@@ -100,7 +100,8 @@ def retrieve(
     Returns:
         List of RetrievedChunk objects, ordered by descending similarity.
     """
-    embedding = _embed_question(question)
+    from src.embedder import _embed_with_retry
+    embedding = _embed_with_retry(question)
 
     sb = _get_supabase()
     response = sb.rpc(SUPABASE_RPC_FN, {
@@ -127,7 +128,8 @@ def answer(
     attachment_data: str | None = None,
     attachment_mime_type: str | None = None,
     require_graph: bool = False,
-    quick_lookup: bool = False
+    quick_lookup: bool = False,
+    model_name: str | None = None
 ) -> AnswerResult:
     """
     Full RAG cycle: retrieve chunks → build prompt → generate answer.
@@ -153,7 +155,8 @@ def answer(
         attachment_data=attachment_data, 
         attachment_mime_type=attachment_mime_type,
         is_interactive=is_interactive,
-        quick_lookup=quick_lookup
+        quick_lookup=quick_lookup,
+        model_name=model_name
     )
     
     answer_text = raw_answer
@@ -210,34 +213,7 @@ Respond ONLY with 'YES' if it fits one of these categories, or 'NO' if it does n
         return False
 
 
-def _embed_question(question: str) -> list[float]:
-    """Embed a question string with retry on rate limits."""
-    client = _get_gemini()
-    delay = RETRY_BASE_DELAY_S
 
-    for attempt in range(1, RETRY_MAX_ATTEMPTS + 1):
-        try:
-            result = client.models.embed_content(
-                model=GEMINI_EMBED_MODEL,
-                contents=question,
-                config=genai_types.EmbedContentConfig(
-                    output_dimensionality=EMBEDDING_DIM,
-                ),
-            )
-            return list(result.embeddings[0].values)
-
-        except genai_errors.ClientError as exc:
-            if _is_rate_limit(exc) and attempt < RETRY_MAX_ATTEMPTS:
-                logger.warning(
-                    f"Rate limit on embed (attempt {attempt}). "
-                    f"Retrying in {delay:.1f}s …"
-                )
-                time.sleep(delay)
-                delay *= 2
-            else:
-                raise
-
-    raise RuntimeError("Question embedding failed after all retries.")
 
 
 def _generate_answer(
@@ -246,7 +222,8 @@ def _generate_answer(
     attachment_data: str | None = None,
     attachment_mime_type: str | None = None,
     is_interactive: bool = False,
-    quick_lookup: bool = False
+    quick_lookup: bool = False,
+    model_name: str | None = None
 ) -> str:
     """
     Build the grounding prompt and call the LLM via call_llm() to generate
@@ -347,7 +324,8 @@ Use modern, beautiful styling (dark mode, glassmorphism, #8b5cf6 violet accents)
         user_prompt=user_prompt,
         context=f"CONTEXT EXCERPTS FROM NCERT:\n\n{context_block}",
         attachment_data=attachment_data,
-        attachment_mime_type=attachment_mime_type
+        attachment_mime_type=attachment_mime_type,
+        model_name=model_name
     )
 
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera } from 'lucide-react';
+import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera, ChevronDown, BookOpen } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiClient } from '../../core/api-client';
 import type { ChatResponse } from '../../core/api-client';
@@ -59,9 +59,63 @@ export default function NcertChat() {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [graphMode, setGraphMode] = useState(false);
+  const [model, setModel] = useState<'gemini-flash-latest' | 'gemini-pro-latest' | 'openai/gpt-oss-120b' | 'qwen/qwen3.6-27b'>('gemini-flash-latest');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [attachment, setAttachment] = useState<{ data: string, type: string, name: string } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const MODELS = [
+    { group: 'Google (Gemini)', options: [
+      { id: 'gemini-flash-latest', label: 'Gemini Flash', sub: 'Fast & responsive' },
+      { id: 'gemini-pro-latest', label: 'Gemini Pro', sub: 'Smart & complex' },
+    ]},
+    { group: 'Smartest & Reasoning', options: [
+      { id: 'openai/gpt-oss-120b', label: 'ChatGPT', sub: 'OpenAI behemoth' },
+      { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', sub: 'Deep thinking & logic' },
+    ]}
+  ];
+
+  const selectedModelObj = MODELS.flatMap(g => g.options).find(o => o.id === model);
+
+  const processImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > 1024 || height > 1024) {
+          const ratio = Math.min(1024 / width, 1024 / height);
+          width *= ratio;
+          height *= ratio;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        const base64 = canvas.toDataURL('image/jpeg', 0.6);
+        setAttachment({ data: base64, type: 'image/jpeg', name: file.name || 'pasted-image.jpg' });
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,31 +129,23 @@ export default function NcertChat() {
       };
       reader.readAsDataURL(file);
     } else if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > 1024 || height > 1024) {
-            const ratio = Math.min(1024 / width, 1024 / height);
-            width *= ratio;
-            height *= ratio;
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          const base64 = canvas.toDataURL('image/jpeg', 0.6);
-          setAttachment({ data: base64, type: 'image/jpeg', name: file.name });
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      processImageFile(file);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          processImageFile(file);
+          e.preventDefault();
+          break;
+        }
+      }
     }
   };
 
@@ -185,6 +231,7 @@ export default function NcertChat() {
     try {
       const response = await apiClient.chat.sendNcertMessage(
         userMsg.content, 
+        model,
         sessionId,
         attachment?.data,
         attachment?.type,
@@ -247,6 +294,62 @@ export default function NcertChat() {
         onClose={() => setIsSidebarOpen(false)} 
       />
 
+      {/* NCERT Chat indicator & Model Switcher */}
+      <div className="h-14 bg-surface border-b border-border-glass flex items-center justify-between px-4 shrink-0 backdrop-blur-md relative z-20 shadow-glass-sm">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-accent" />
+          <span className="text-xs font-semibold text-accent uppercase tracking-wider">
+            NCERT Space
+          </span>
+        </div>
+        
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-2.5 bg-surface-strong border border-border-glass rounded-xl px-3 py-1.5 text-sm hover:border-accent/40 hover:bg-accent/5 transition-all shadow-glass-sm group active:scale-95"
+          >
+            <div className="flex flex-col items-start leading-none text-left">
+              <span className="text-[10px] text-accent font-semibold uppercase tracking-wider mb-0.5">Model</span>
+              <span className="text-foreground font-medium text-[13px] whitespace-nowrap">{selectedModelObj?.label || 'Select Model'}</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-muted transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-accent' : 'group-hover:text-accent/70'}`} />
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border-glass rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 z-50">
+              {MODELS.map((group, i) => (
+                <div key={group.group}>
+                  {i > 0 && <div className="h-px bg-border-glass my-2 mx-3" />}
+                  <div className="px-4 py-1.5 text-[10px] font-bold text-muted uppercase tracking-widest">
+                    {group.group}
+                  </div>
+                  <div className="flex flex-col px-2">
+                    {group.options.map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          setModel(opt.id as any);
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-accent/10 rounded-lg transition-colors group"
+                      >
+                        <div className="flex flex-col">
+                          <span className={`font-medium text-[13px] ${model === opt.id ? 'text-accent' : 'text-foreground/90 group-hover:text-accent'}`}>
+                            {opt.label}
+                          </span>
+                          <span className="text-[11px] text-muted mt-0.5">{opt.sub}</span>
+                        </div>
+                        {model === opt.id && <Check className="w-4 h-4 text-accent" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Messages */}
       <div 
         ref={scrollRef}
@@ -258,7 +361,7 @@ export default function NcertChat() {
             <img src="/pwa-192x192.png" alt="Jules" className="w-20 h-20 rounded-3xl shadow-glow-accent animate-pulse-slow" />
             <div className="text-center space-y-2">
               <p className="text-foreground font-semibold text-lg tracking-tight">Ask a question from NCERT</p>
-              <p className="text-secondary text-sm tracking-wide uppercase">Biology, Physics, or Chemistry</p>
+              <p className="text-secondary text-sm tracking-wide uppercase">Biology, Physics, Chemistry, or even BSc</p>
             </div>
           </div>
         )}
@@ -490,6 +593,7 @@ export default function NcertChat() {
                   if (input.trim() || attachment) handleSend();
                 }
               }}
+              onPaste={handlePaste}
               placeholder={attachment ? "Message..." : "Message..."}
               className="w-full max-h-32 resize-none bg-transparent py-3 px-2 outline-none text-[15px] text-foreground placeholder:text-muted scrollbar-hide"
               rows={1}
