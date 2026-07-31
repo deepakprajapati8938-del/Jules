@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from backend.deps import get_supabase
+from backend.routers.tests import RAW_CHAPTER_ALIASES
 from src.llm_wrapper import call_llm
 from src.config import GEMINI_PRO_MODEL
 
@@ -19,8 +20,9 @@ def generate_cheatsheet(chapter_name: str, sb: Client = Depends(get_supabase)):
     Generate a 1-page quick-revision cheat-sheet for a specific chapter
     by summarizing all its chunks via Gemini.
     """
+    db_chapter_name = RAW_CHAPTER_ALIASES.get(chapter_name, chapter_name)
     # Convert "Cell - The Unit of Life" to "%Cell%The%Unit%of%Life%" for a robust match
-    pattern = "%" + "%".join([w for w in chapter_name.replace("-", " ").split() if w.strip()]) + "%"
+    pattern = "%" + "%".join([w for w in db_chapter_name.replace("-", " ").split() if w.strip()]) + "%"
     
     # Supabase ilike on jsonb field metadata->>chapter
     res = sb.table("neet_chunks").select("content").ilike("metadata->>chapter", pattern).execute()

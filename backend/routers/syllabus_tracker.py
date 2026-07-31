@@ -33,6 +33,34 @@ def normalize_name(s: str) -> str:
         return ""
     return re.sub(r'[^a-z0-9]', '', s.lower())
 
+CHAPTER_ALIASES = {
+    # Chemistry
+    normalize_name("Redox Reaction"): normalize_name("Redox Reactions"),
+    normalize_name("Hydrocarbon"): normalize_name("Hydrocarbons"),
+    normalize_name("Atomic Structure"): normalize_name("Structure Of Atom"),
+    normalize_name("Organic Chemistry: GOC"): normalize_name("Organic Chemistry Some Basic Principles"),
+    normalize_name("Organic Chemistry: IUPAC Nomenclature"): normalize_name("Organic Chemistry Some Basic Principles"),
+    normalize_name("Organic Chemistry: Isomerism"): normalize_name("Organic Chemistry Some Basic Principles"),
+    
+    # Physics
+    normalize_name("Work, Energy & Power"): normalize_name("Work Energy And Power"),
+    normalize_name("Centre of mass and System of Particles"): normalize_name("Centre Of Mass And Rotational Motion"),
+    normalize_name("Rotational Motion"): normalize_name("Centre Of Mass And Rotational Motion"),
+    
+    # Botany
+    normalize_name("Sexual Reproduction in Flowering Plant"): normalize_name("Sexual Reproduction In Flowering Plants"),
+    normalize_name("Principle of Inheritance and Variation"): normalize_name("Principles Of Inheritance"),
+    normalize_name("Organisms and Population"): normalize_name("Organisms And Populations"),
+    
+    # Zoology
+    normalize_name("Structural Organization in Animals"): normalize_name("Structural Organisation In Animals"),
+    normalize_name("Excretory Products & their Elimination"): normalize_name("Excretory Products"),
+    normalize_name("Chemical Coordination & Integration"): normalize_name("Chemical Coordination"),
+    normalize_name("Human Health and Diseases"): normalize_name("Human Health And Disease"),
+    normalize_name("Biotechnology: Principles & Processes"): normalize_name("Biotechnology Principles"),
+    normalize_name("Biotechnology and its Applications"): normalize_name("Biotechnology Applications"),
+}
+
 def clean_topic_name(t: str) -> str:
     # Remove markdown bold/italics
     t = re.sub(r'[*_]{1,3}', '', t)
@@ -51,12 +79,47 @@ def clean_topic_name(t: str) -> str:
     return t
 
 def is_junk_topic(t: str) -> bool:
-    t_lower = t.lower()
-    junk_words = ['exercises', 'summary', 'biology', 'chemistry', 'physics', 'reprint', 'figure']
-    if any(j == t_lower for j in junk_words):
+    t_lower = t.lower().strip()
+
+    # Too short to be a real topic
+    if len(t.strip()) < 4:
         return True
-    if 'reprint' in t_lower or 'figure ' in t_lower:
+
+    # Exact junk words
+    junk_exact = {'exercises', 'summary', 'biology', 'chemistry', 'physics', 'reprint',
+                  'figure', 'table', 'appendix', 'introduction', 'conclusion', 'index',
+                  'contents', 'preface', 'notes', 'answers', 'problems', 'solutions',
+                  'mathematics', 'unit', 'intext questions'}
+    if t_lower in junk_exact:
         return True
+
+    # Contains equation/formula operators — these are chemical equations or math, not topic names
+    formula_chars = ['=', '→', '⇌', '±', '≡', '∝', '∞', '√', '∑', '∫', '°']
+    if any(c in t for c in formula_chars):
+        return True
+
+    # Chemical/math formula pattern: contains digits mixed with uppercase letters (e.g. Cr2O7, S2O3, H2SO4)
+    # Real topic names don't look like this
+    if re.search(r'[A-Z][a-z]?\d', t):
+        return True
+
+    # Ion/electrode notation (e.g. Hg2+/Hg, Fe3+) — must end with + or - at a word boundary
+    if re.search(r'[A-Za-z]\d+[\+\-]+\b', t):
+        return True
+
+    # Looks like a problem/unit/example reference (e.g. "Problem 7.7", "Unit 7", "Example 3")
+    if re.match(r'(?i)^(problem|unit|example|intext|exercise|question|table|fig|note)\s*[\d.]+', t):
+        return True
+
+    # Looks like a pure math expression or variable (e.g. "X + Yz → Xz + Y")
+    if re.search(r'\b[A-Z]\s*[\+\-\*\/]\s*[A-Z]', t):
+        return True
+
+    # Contains keywords that signal it's a page artifact, not a topic
+    junk_substrings = ['reprint', 'figure ', 'ncert', 'www.', 'http', 'page ', '©', 'board of']
+    if any(j in t_lower for j in junk_substrings):
+        return True
+
     return False
 
 def parse_roadmap():
@@ -102,7 +165,7 @@ def get_syllabus_tracker(supabase: Client = Depends(get_supabase)):
         ch = meta.get("chapter")
         topic = meta.get("topic")
         # Ensure it's not a root heading masquerading as a topic
-        if ch and topic and topic != ch and not topic.startswith(ch):
+        if ch and topic and topic.strip() != ch.strip():
             norm_ch = normalize_name(ch)
             if norm_ch not in db_topics:
                 db_topics[norm_ch] = set()
@@ -129,12 +192,13 @@ def get_syllabus_tracker(supabase: Client = Depends(get_supabase)):
     for subj in roadmap:
         for chap in subj["chapters"]:
             norm_ch = normalize_name(chap["name"])
+            db_ch = CHAPTER_ALIASES.get(norm_ch, norm_ch)
             
             # Set chapter completion
             chap["is_completed"] = progress_map.get((norm_ch, ""), False)
             
             # Populate topics
-            topics = sorted(list(db_topics.get(norm_ch, [])))
+            topics = sorted(list(db_topics.get(db_ch, [])))
             chap["topics"] = [
                 {
                     "name": t,

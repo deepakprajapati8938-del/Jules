@@ -76,32 +76,39 @@ export default function SyllabusTracker() {
       <div className="space-y-6">
         {syllabus.map((subject, sIdx) => {
           const totalChapters = subject.chapters.length;
-          const completedChapters = subject.chapters.filter(c => c.is_completed).length;
+          const completedChapters = subject.chapters.filter(c => {
+            const hasTopics = c.topics.length > 0;
+            const completedTopics = c.topics.filter(t => t.is_completed).length;
+            return c.is_completed || (hasTopics && completedTopics === c.topics.length);
+          }).length;
           const isExpanded = expandedSubject === subject.name;
           
-          let ringColor = 'ring-border-glass';
-          if (subject.name === 'Botany') ringColor = 'ring-emerald-500/30';
-          if (subject.name === 'Zoology') ringColor = 'ring-blue-500/30';
-          if (subject.name === 'Physics') ringColor = 'ring-rose-500/30';
-          if (subject.name === 'Chemistry') ringColor = 'ring-amber-500/30';
+          type SubjectTheme = { ring: string; avatarBg: string; avatarText: string; bar: string; expandedBg: string; };
+          const themes: Record<string, SubjectTheme> = {
+            Botany:    { ring: 'ring-emerald-500/40', avatarBg: 'bg-emerald-500/10', avatarText: 'text-emerald-400', bar: 'bg-gradient-to-r from-emerald-500 to-teal-400',    expandedBg: 'bg-emerald-950/40 border-b border-emerald-500/20' },
+            Zoology:   { ring: 'ring-blue-500/40',    avatarBg: 'bg-blue-500/10',    avatarText: 'text-blue-400',    bar: 'bg-gradient-to-r from-blue-500 to-cyan-400',      expandedBg: 'bg-blue-950/40 border-b border-blue-500/20' },
+            Physics:   { ring: 'ring-rose-500/40',    avatarBg: 'bg-rose-500/10',    avatarText: 'text-rose-400',    bar: 'bg-gradient-to-r from-rose-500 to-pink-400',      expandedBg: 'bg-rose-950/40 border-b border-rose-500/20' },
+            Chemistry: { ring: 'ring-amber-500/40',   avatarBg: 'bg-amber-500/10',   avatarText: 'text-amber-400',   bar: 'bg-gradient-to-r from-amber-500 to-orange-400',   expandedBg: 'bg-amber-950/40 border-b border-amber-500/20' },
+          };
+          const theme = themes[subject.name] ?? { ring: 'ring-border-glass', avatarBg: 'bg-surface', avatarText: 'text-foreground', bar: 'bg-accent-gradient', expandedBg: 'bg-surface-hover/50 border-b border-border-glass' };
 
           return (
             <div key={subject.name} className="glass-strong rounded-[2rem] overflow-hidden shadow-glass transition-all duration-300">
               {/* Subject Header */}
               <button 
                 onClick={() => setExpandedSubject(isExpanded ? null : subject.name)}
-                className={`w-full flex items-center justify-between p-6 transition-colors hover:bg-surface-hover ${isExpanded ? 'bg-surface-hover/50 border-b border-border-glass' : ''}`}
+                className={`w-full flex items-center justify-between p-6 transition-colors ${isExpanded ? theme.expandedBg : 'hover:bg-surface-hover/30'}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-surface ring-1 ${ringColor} shadow-glass-inset`}>
-                    <span className="font-bold text-foreground text-lg">{subject.name[0]}</span>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${theme.avatarBg} ring-1 ${theme.ring} shadow-glass-inset`}>
+                    <span className={`font-bold text-lg ${theme.avatarText}`}>{subject.name[0]}</span>
                   </div>
                   <div className="text-left">
                     <h3 className="text-xl font-bold text-foreground tracking-tight">{subject.name}</h3>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="w-32 h-1.5 bg-surface-strong rounded-full overflow-hidden border border-border-glass">
                         <div 
-                          className="h-full bg-accent-gradient transition-all duration-500"
+                          className={`h-full transition-all duration-500 ${theme.bar}`}
                           style={{ width: `${totalChapters === 0 ? 0 : (completedChapters / totalChapters) * 100}%` }}
                         />
                       </div>

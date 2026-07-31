@@ -68,6 +68,34 @@ class MistakeTag(BaseModel):
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+RAW_CHAPTER_ALIASES = {
+    # Chemistry
+    "Redox Reaction": "Redox Reactions",
+    "Hydrocarbon": "Hydrocarbons",
+    "Atomic Structure": "Structure Of Atom",
+    "Organic Chemistry: GOC": "Organic Chemistry Some Basic Principles",
+    "Organic Chemistry: IUPAC Nomenclature": "Organic Chemistry Some Basic Principles",
+    "Organic Chemistry: Isomerism": "Organic Chemistry Some Basic Principles",
+    
+    # Physics
+    "Work, Energy & Power": "Work Energy And Power",
+    "Centre of mass and System of Particles": "Centre Of Mass And Rotational Motion",
+    "Rotational Motion": "Centre Of Mass And Rotational Motion",
+    
+    # Botany
+    "Sexual Reproduction in Flowering Plant": "Sexual Reproduction In Flowering Plants",
+    "Principle of Inheritance and Variation": "Principles Of Inheritance",
+    "Organisms and Population": "Organisms And Populations",
+    
+    # Zoology
+    "Structural Organization in Animals": "Structural Organisation In Animals",
+    "Excretory Products & their Elimination": "Excretory Products",
+    "Chemical Coordination & Integration": "Chemical Coordination",
+    "Human Health and Diseases": "Human Health And Disease",
+    "Biotechnology: Principles & Processes": "Biotechnology Principles",
+    "Biotechnology and its Applications": "Biotechnology Applications",
+}
+
 def _fetch_questions(sb: Client, req: GenerateTestRequest) -> list[dict]:
     """Pull random questions from neet_chunks (PYQ source_type) respecting filters."""
     q = sb.table("neet_chunks").select(
@@ -75,7 +103,8 @@ def _fetch_questions(sb: Client, req: GenerateTestRequest) -> list[dict]:
     ).eq("syllabus_excluded", False)
     
     if req.test_type == "chapter" and req.chapter_name:
-        q = q.filter("metadata->>chapter", "eq", req.chapter_name)
+        db_chapter = RAW_CHAPTER_ALIASES.get(req.chapter_name, req.chapter_name)
+        q = q.filter("metadata->>chapter", "eq", db_chapter)
     elif req.test_type == "subject" and req.subject:
         q = q.filter("metadata->>subject", "eq", req.subject)
     # mock/custom: no filter — full bank

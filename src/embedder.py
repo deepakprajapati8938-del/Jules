@@ -150,7 +150,7 @@ def _embed_with_retry(text: str) -> list[float]:
     On each 429, rotates to the next API key before retrying (no sleep needed
     if there are multiple keys — the other key has its own fresh quota window).
     """
-    global _gemini_clients
+    global _gemini_clients, _gemini_key_index
     # Ensure pool is initialised
     _get_gemini()
     delay = RETRY_BASE_DELAY_S
@@ -169,6 +169,17 @@ def _embed_with_retry(text: str) -> list[float]:
             return list(result.embeddings[0].values)
 
         except genai_errors.ClientError as exc:
+            msg = str(exc).lower()
+            if "403" in msg or "permission_denied" in msg:
+                real_idx = _gemini_key_index % len(_gemini_clients)
+                logger.error(f"    Key #{real_idx + 1} is DEAD (403). Removing from pool.")
+                _gemini_clients.pop(real_idx)
+                if not _gemini_clients:
+                    raise RuntimeError("All Gemini API keys are dead (403).") from exc
+                _gemini_key_index = real_idx % len(_gemini_clients)
+                num_keys = len(_gemini_clients)
+                continue
+                
             if _is_rate_limit(exc) and attempt < RETRY_MAX_ATTEMPTS:
                 _rotate_gemini_key()
                 # Only sleep if we've cycled through all keys

@@ -180,3 +180,15 @@
   - `src/retriever.py`: Fixed Vercel 504 serverless timeout error caused by `time.sleep()` blocking during rate limit hits when embedding images. Replaced with robust multi-key rotation `embed_with_retry` from `src/embedder.py`.
   - `NcertChat.tsx` & `PersonalChat.tsx`: Added `onPaste` event handler to natively support clipboard image pasting (Ctrl+V) directly into the chat prompt.
   - Added Model Switcher UI to NCERT Chat. Removed "Groq Ultra-Fast" models, renamed "GPT-OSS 120B" to "ChatGPT", and set `gemini-flash-latest` as the unified default for speed and multimodal safety.
+  - `SyllabusTracker.tsx`: Fixed a UI bug where manually completing all topics in a chapter wouldn't update the subject-level progress bar properly.
+  - `backend/routers/syllabus_tracker.py`: Added `CHAPTER_ALIASES` mapping to fix "Topics pending extraction" for Chemistry/Physics chapters whose Yakeen planner names didn't exactly match the NCERT PDF names in the database.
+- [x] **Phase 15 (Syllabus Tracker Full Fix) — 2026-07-31:**
+  - `SyllabusTracker.tsx`: Fixed subject-level progress bar not updating when individual topics were ticked (was only counting `chapter.is_completed`, not topic-level completions).
+  - `SyllabusTracker.tsx`: Full per-subject color theming — Botany=emerald, Zoology=blue, Physics=rose, Chemistry=amber — applied to avatar, ring, progress bar, and expanded header background.
+  - `backend/routers/syllabus_tracker.py`: Fixed critical bug — `topic.startswith(ch)` filter was silently dropping ALL topics whose names began with the chapter name (e.g. "Redox Reactions in Terms of Electron Transfer" was filtered because it starts with "Redox Reactions"). Fixed to exact equality check only.
+  - `backend/routers/syllabus_tracker.py`: Added comprehensive `CHAPTER_ALIASES` covering all Botany, Zoology, Physics, and Chemistry planner↔NCERT name mismatches.
+  - `backend/routers/syllabus_tracker.py`: Massively improved `is_junk_topic()` filter — now catches chemical formulas (Cr2O7, S2O3), equations (=, →), ion notation (Fe3+), problem/unit labels (Problem 7.7, Unit 7), and page artifacts.
+  - `backend/routers/tests.py`: Added same `RAW_CHAPTER_ALIASES` mapping so chapter-wise PYQ tests correctly resolve planner names to DB names.
+  - `backend/routers/cheatsheet.py`: Same alias fix so cheat-sheet generation finds the right NCERT chunks.
+  - `scripts/reingest_redox.py`: One-shot script to re-ingest Redox Reactions with proper NCERT topic structure (chapter had only formula/junk headings in original ingest).
+  - `scripts/reingest_all_empty.py`: Batch re-ingested 39 chapters (24 Physics + 14 Chemistry + 1 Biology) that had 0 topics. DB grew from ~3,488 → ~4,871 rows. All PDFs in `data/ncert/` are now properly ingested with real chapter names.
