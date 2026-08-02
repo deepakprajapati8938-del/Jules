@@ -187,8 +187,17 @@
   - `SyllabusTracker.tsx`: Full per-subject color theming — Botany=emerald, Zoology=blue, Physics=rose, Chemistry=amber — applied to avatar, ring, progress bar, and expanded header background.
   - `backend/routers/syllabus_tracker.py`: Fixed critical bug — `topic.startswith(ch)` filter was silently dropping ALL topics whose names began with the chapter name (e.g. "Redox Reactions in Terms of Electron Transfer" was filtered because it starts with "Redox Reactions"). Fixed to exact equality check only.
   - `backend/routers/syllabus_tracker.py`: Added comprehensive `CHAPTER_ALIASES` covering all Botany, Zoology, Physics, and Chemistry planner↔NCERT name mismatches.
-  - `backend/routers/syllabus_tracker.py`: Massively improved `is_junk_topic()` filter — now catches chemical formulas (Cr2O7, S2O3), equations (=, →), ion notation (Fe3+), problem/unit labels (Problem 7.7, Unit 7), and page artifacts.
-  - `backend/routers/tests.py`: Added same `RAW_CHAPTER_ALIASES` mapping so chapter-wise PYQ tests correctly resolve planner names to DB names.
-  - `backend/routers/cheatsheet.py`: Same alias fix so cheat-sheet generation finds the right NCERT chunks.
-  - `scripts/reingest_redox.py`: One-shot script to re-ingest Redox Reactions with proper NCERT topic structure (chapter had only formula/junk headings in original ingest).
-  - `scripts/reingest_all_empty.py`: Batch re-ingested 39 chapters (24 Physics + 14 Chemistry + 1 Biology) that had 0 topics. DB grew from ~3,488 → ~4,871 rows. All PDFs in `data/ncert/` are now properly ingested with real chapter names.
+- [x] **Phase 16 (Bulk PYQ Ingestion, PYQ Dropdown Badges & Upgraded Reflection Journal) — 2026-08-03:**
+  - `scripts/ingest_custom_pyqs.py`: Built & executed automated batch ingestion script for chapter-wise Chemistry PYQ PDFs. Processed 10 chapters (Hydrocarbons, Haloalkanes, Alcohols, Aldehydes, etc.), growing total `neet_chunks` rows from `4,871` to `5,235`.
+  - `backend/routers/tests.py`: Added `GET /tests/available-pyq-chapters` endpoint to return distinct chapters containing ingested PYQs.
+  - `frontend/src/components/CustomSelect.tsx`: Enhanced dropdown component to support disabled states and custom badges.
+  - `frontend/src/features/tests/Tests.tsx`: Added dynamic `🔥 PYQs` badge in the chapter selection dropdown to visually highlight chapters loaded with PYQs.
+  - `frontend/src/features/reflection-journal/ReflectionJournal.tsx`: Completely upgraded Reflection Journal with rotating prompts, shuffle button, tab navigation, and AI weekly growth insights.
+  - `frontend/src/app-shell/AppShell.tsx`: Retained original frosted glass drawer background (`glass-strong`) while keeping boosted text contrast (`text-foreground/85`) for crisp mobile readability.
+
+
+
+
+
+
+

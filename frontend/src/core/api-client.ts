@@ -437,6 +437,7 @@ export const apiClient = {
         method: 'PATCH',
         body: JSON.stringify({ mistake_type }),
       }),
+    getAvailablePyqChapters: () => fetchApi<string[]>('/tests/available-pyq-chapters'),
   },
   saves: {
     list: (category?: string) => fetchApi<SavedItem[]>(category ? `/saves?category=${category}` : '/saves'),

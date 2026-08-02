@@ -21,6 +21,7 @@ export default function Tests() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingFact, setLoadingFact] = useState<FactOut | null>(null);
+  const [availablePyqChapters, setAvailablePyqChapters] = useState<string[]>([]);
   
   // Map of question_id -> { chosen_ans, marked_for_review, visited }
   const [answers, setAnswers] = useState<Record<number, { chosen_ans: string | null; marked_for_review: boolean; visited: boolean }>>({});
@@ -41,6 +42,10 @@ export default function Tests() {
     }
     return () => clearInterval(interval);
   }, [testState]);
+
+  useEffect(() => {
+    apiClient.tests.getAvailablePyqChapters().then(setAvailablePyqChapters).catch(console.error);
+  }, []);
 
   useEffect(() => {
     let progressInterval: ReturnType<typeof setInterval>;
@@ -576,7 +581,16 @@ export default function Tests() {
                 value={chapter}
                 onChange={setChapter}
                 placeholder="Select Chapter..."
-                options={subject && NEET_SYLLABUS[subject] ? NEET_SYLLABUS[subject].map(ch => ({ value: ch, label: ch })) : []}
+                options={subject && NEET_SYLLABUS[subject] ? 
+                  NEET_SYLLABUS[subject].map(ch => {
+                    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const hasPyq = availablePyqChapters.some(avail => norm(avail) === norm(ch));
+                    return { 
+                      value: ch, 
+                      label: ch,
+                      badge: hasPyq ? '🔥 PYQs' : undefined
+                    };
+                  }) : []}
               />
             </div>
           )}

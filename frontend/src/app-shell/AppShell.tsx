@@ -141,7 +141,7 @@ export function AppShell() {
         onClick={() => setIsNavOpen(false)} 
       />
 
-      {/* Nav Panel — glass */}
+      {/* Nav Panel — original glass-strong with enhanced text contrast */}
       <nav 
         className={`fixed top-0 left-0 bottom-0 w-72 glass-strong z-50 transform transition-transform duration-300 ease-in-out flex flex-col shadow-glass ${
           isNavOpen ? 'translate-x-0' : '-translate-x-full'
@@ -154,14 +154,14 @@ export function AppShell() {
           </div>
           <button 
             onClick={() => setIsNavOpen(false)}
-            className="p-2 -mr-2 text-secondary hover:text-foreground hover:bg-surface-hover rounded-xl transition-colors active-scale"
+            className="p-2 -mr-2 text-foreground/80 hover:text-foreground hover:bg-surface-hover rounded-xl transition-colors active-scale"
             aria-label="Close navigation"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        <div className="flex-1 overflow-y-auto p-3 space-y-1 scrollbar-hide">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
@@ -171,12 +171,12 @@ export function AppShell() {
                 className={({ isActive }) => 
                   `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 active-scale ${
                     isActive 
-                      ? 'bg-accent-tint text-accent shadow-glass-inset border border-accent/20' 
-                      : 'text-secondary hover:bg-surface-hover hover:text-foreground border border-transparent'
+                      ? 'bg-accent-tint text-accent shadow-glass-inset border border-accent/20 font-semibold' 
+                      : 'text-foreground/85 hover:bg-surface-hover hover:text-foreground border border-transparent'
                   }`
                 }
               >
-                <Icon className="w-5 h-5 shrink-0" />
+                <Icon className="w-5 h-5 shrink-0 opacity-90" />
                 {item.label}
               </NavLink>
             );

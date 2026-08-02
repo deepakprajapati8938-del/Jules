@@ -63,6 +63,16 @@ class SubmitResult(BaseModel):
     unattempted: int
     breakdown: dict
 
+@router.get("/available-pyq-chapters", response_model=list[str])
+def get_available_pyq_chapters(sb: Client = Depends(get_supabase)):
+    res = sb.table("neet_chunks").select("metadata").ilike("metadata->>source_type", "%pyq%").execute()
+    chapters = set()
+    for row in res.data or []:
+        ch = row.get("metadata", {}).get("chapter")
+        if ch:
+            chapters.add(ch)
+    return list(chapters)
+
 class MistakeTag(BaseModel):
     mistake_type: ValidMistakeType
 

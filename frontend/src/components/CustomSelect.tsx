@@ -4,6 +4,8 @@ import { ChevronDown } from 'lucide-react';
 interface Option {
   value: string;
   label: string;
+  disabled?: boolean;
+  badge?: React.ReactNode;
 }
 
 interface CustomSelectProps {
@@ -54,18 +56,28 @@ export default function CustomSelect({ value, onChange, options, placeholder, cl
               <button
                 key={opt.value}
                 type="button"
+                disabled={opt.disabled}
                 onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
+                  if (!opt.disabled) {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }
                 }}
-                className={`w-full text-left px-4 py-3 rounded-xl text-[15px] transition-colors flex items-center gap-3 ${
+                className={`w-full text-left px-4 py-3 rounded-xl text-[15px] transition-colors flex items-center justify-between ${
                   value === opt.value 
                     ? 'bg-accent-tint text-accent font-medium' 
+                    : opt.disabled
+                    ? 'text-foreground/30 cursor-not-allowed opacity-60'
                     : 'text-foreground/90 hover:bg-surface-strong'
                 }`}
               >
-                {value === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
-                {opt.label}
+                <div className="flex items-center gap-3">
+                  {value === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
+                  {opt.label}
+                </div>
+                {opt.badge && (
+                  <div className="shrink-0">{opt.badge}</div>
+                )}
               </button>
             ))}
           </div>
