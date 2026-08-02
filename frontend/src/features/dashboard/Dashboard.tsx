@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, CheckCircle2, Flame, HeartHandshake, Lightbulb, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, Flame, HeartHandshake, Lightbulb, CalendarDays, Loader2 } from 'lucide-react';
 import { apiClient } from '../../core/api-client';
 import type { FactOut } from '../../core/api-client';
 import { calculateStreak, type StreakData } from '../../utils/streak-calculator';
@@ -51,10 +51,12 @@ export default function Dashboard() {
 
   const [streakData, setStreakData] = useState<StreakData | null>(null);
   const [dailyFact, setDailyFact] = useState<FactOut | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    apiClient.dashboard.getStats().then(setStats).catch(console.error);
-    apiClient.confidence.list().then(items => {
+    const p1 = apiClient.dashboard.getStats().then(setStats).catch(console.error);
+    
+    const p2 = apiClient.confidence.list().then(items => {
       const stats = {
         confident: 0, comfortable: 0, revised: 0, learning: 0, not_started: 0
       };
@@ -66,15 +68,17 @@ export default function Dashboard() {
       setConfidenceStats(stats);
     }).catch(console.error);
     
-    apiClient.dailyLog.getHistory().then(history => {
+    const p3 = apiClient.dailyLog.getHistory().then(history => {
       setStreakData(calculateStreak(history));
     }).catch(console.error);
 
-    apiClient.facts.getRandom(1)
+    const p4 = apiClient.facts.getRandom(1)
       .then(res => {
         if (res && res.length > 0) setDailyFact(res[0]);
       })
       .catch(console.error);
+      
+    Promise.all([p1, p2, p3, p4]).finally(() => setIsLoading(false));
   }, []);
 
   const studyData = stats.study_trend;
@@ -101,12 +105,17 @@ export default function Dashboard() {
             <p className="text-secondary text-sm mt-1 uppercase tracking-wider">Your Personal Dashboard</p>
           </div>
         </div>
-        {streakData && streakData.currentStreak > 0 && (
+        {isLoading ? (
+          <div className="flex items-center gap-2 glass-strong px-4 py-2 rounded-full border border-border-glass shrink-0 opacity-70">
+            <Loader2 className="w-4 h-4 text-secondary animate-spin" />
+            <span className="text-secondary text-sm font-medium">Connecting...</span>
+          </div>
+        ) : (streakData && streakData.currentStreak > 0) ? (
           <div className="flex items-center gap-2 glass-strong px-4 py-2 rounded-full shadow-glow-accent-sm border border-accent/20 shrink-0">
             <Flame className="w-5 h-5 text-accent animate-pulse" />
             <span className="text-foreground font-bold">{streakData.currentStreak} Day Streak!</span>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Daily Affirmation Widget - Styled cleaner without borders/orbs */}
@@ -164,20 +173,20 @@ export default function Dashboard() {
         </div>
         
         {/* 7-Day Activity Strip */}
-        <div className="flex items-center justify-between gap-2 mb-8 px-2 md:px-8">
+        <div className="flex items-center justify-between gap-1 sm:gap-2 mb-8 px-0 sm:px-2 md:px-8">
           {stats.study_trend.map((day, i) => {
             const isActive = day.minutes > 0;
             return (
               <div key={i} className="flex flex-col items-center gap-2">
                 <div 
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
                     isActive 
                       ? 'bg-accent text-white shadow-glow-accent scale-110' 
                       : 'border-2 border-border-glass text-secondary bg-surface-strong'
                   }`}
                   title={`${day.minutes} mins`}
                 >
-                  {isActive ? <CheckCircle2 className="w-5 h-5 text-white" /> : <span className="opacity-50">-</span>}
+                  {isActive ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" /> : <span className="opacity-50">-</span>}
                 </div>
                 <span className="text-[10px] uppercase text-secondary font-medium tracking-wider">{day.date}</span>
               </div>
@@ -185,7 +194,12 @@ export default function Dashboard() {
           })}
         </div>
         
-        <div className="h-64">
+        <div className="h-64 relative">
+          {isLoading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/40 backdrop-blur-sm rounded-xl">
+              <Loader2 className="w-8 h-8 text-accent animate-spin" />
+            </div>
+          )}
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={studyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>

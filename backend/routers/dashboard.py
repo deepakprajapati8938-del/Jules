@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import json
 import random
 from src.llm_wrapper import call_llm
+from src.config import GEMINI_TEXT_MODEL
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -155,7 +156,7 @@ def get_quick_mcq(sb: Client = Depends(get_supabase)):
         response_text = call_llm(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            model_name="gemini-3.5-flash-lite",
+            model_name=GEMINI_TEXT_MODEL,
             max_retries=2
         )
         # Strip markdown formatting if the model still outputs it
