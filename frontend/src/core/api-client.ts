@@ -327,14 +327,20 @@ export interface SubjectProgress {
 
 export const apiClient = {
   dailyLog: {
-    logSession: (subject: string, chapter_name: string, time_spent_mins: number, notes?: string) => {
+    logSession: (subject: string, chapter_name: string, time_spent_mins: number, notes?: string, session_date?: string) => {
       clearDashboardCache();
       return fetchApi<StudySession>('/daily-log', {
         method: 'POST',
-        body: JSON.stringify({ subject, chapter_name, time_spent_mins, notes }),
+        body: JSON.stringify({ subject, chapter_name, time_spent_mins, notes, session_date }),
       });
     },
-    getHistory: () => fetchWithCache<StudySession[]>('jules_daily_log_history', '/daily-log/history'),
+    getHistory: (limit: number = 500, subject?: string) => {
+      const query = new URLSearchParams();
+      if (limit) query.append('limit', limit.toString());
+      if (subject && subject !== 'All') query.append('subject', subject);
+      const endpoint = `/daily-log/history?${query.toString()}`;
+      return fetchWithCache<StudySession[]>(`jules_daily_log_history_${subject || 'all'}`, endpoint);
+    },
   },
   chat: {
     sendNcertMessage: (question: string, model?: string, session_id?: string, attachment_data?: string, attachment_mime_type?: string, require_graph?: boolean) => 

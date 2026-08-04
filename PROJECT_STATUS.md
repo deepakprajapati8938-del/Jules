@@ -187,17 +187,20 @@
   - `SyllabusTracker.tsx`: Full per-subject color theming — Botany=emerald, Zoology=blue, Physics=rose, Chemistry=amber — applied to avatar, ring, progress bar, and expanded header background.
   - `backend/routers/syllabus_tracker.py`: Fixed critical bug — `topic.startswith(ch)` filter was silently dropping ALL topics whose names began with the chapter name (e.g. "Redox Reactions in Terms of Electron Transfer" was filtered because it starts with "Redox Reactions"). Fixed to exact equality check only.
   - `backend/routers/syllabus_tracker.py`: Added comprehensive `CHAPTER_ALIASES` covering all Botany, Zoology, Physics, and Chemistry planner↔NCERT name mismatches.
-- [x] **Phase 16 (Bulk PYQ Ingestion, PYQ Dropdown Badges & Upgraded Reflection Journal) — 2026-08-03:**
-  - `scripts/ingest_custom_pyqs.py`: Built & executed automated batch ingestion script for chapter-wise Chemistry PYQ PDFs. Processed 10 chapters (Hydrocarbons, Haloalkanes, Alcohols, Aldehydes, etc.), growing total `neet_chunks` rows from `4,871` to `5,235`.
-  - `backend/routers/tests.py`: Added `GET /tests/available-pyq-chapters` endpoint to return distinct chapters containing ingested PYQs.
-  - `frontend/src/components/CustomSelect.tsx`: Enhanced dropdown component to support disabled states and custom badges.
-  - `frontend/src/features/tests/Tests.tsx`: Added dynamic `🔥 PYQs` badge in the chapter selection dropdown to visually highlight chapters loaded with PYQs.
-  - `frontend/src/features/reflection-journal/ReflectionJournal.tsx`: Completely upgraded Reflection Journal with rotating prompts, shuffle button, tab navigation, and AI weekly growth insights.
-  - `frontend/src/app-shell/AppShell.tsx`: Retained original frosted glass drawer background (`glass-strong`) while keeping boosted text contrast (`text-foreground/85`) for crisp mobile readability.
-
-
-
-
+- [x] **Phase 17 (Backdated Daily Logging & High-End NEET 2027 Study Vault) — 2026-08-04:**
+  - `backend/routers/daily_log.py`: Updated `StudySessionCreate` schema to support optional `session_date` (YYYY-MM-DD) for logging missed past days. Updated `get_session_history` to support a high history limit (`limit=500`) and subject filtering.
+  - `frontend/src/core/api-client.ts`: Updated `logSession` and `getHistory` methods to pass `session_date`, limit, and subject filters.
+  - `frontend/src/features/daily-log/DailyLog.tsx`: Redesigned Daily Log into a high-end Dark Glassmorphism Studio view:
+    - **Date Selector**: Quick preset pills (`Today`, `Yesterday`, `Custom Date`) so Prachi can log missed past study sessions anytime.
+    - **Quick Duration Chips**: `30m`, `45m`, `1h`, `1.5h`, `2h`, `3h` for 1-tap fast logging.
+    - **Bento Overview Banner**: Displays total hours logged, total sessions count, and live subject distribution bars (Physics ⚡, Chemistry 🧪, Biology 🧬).
+    - **Fast Search & Jump Navigation (300+ Days Ready)**:
+      - **Month Accordions**: Grouped by Month (`August 2026 — 45 hrs`, `July 2026 — 62 hrs`) with collapsible sections.
+      - **Month Quick-Jump Dropdown**: Jump directly to any month in 1 click.
+      - **Jump-to-Date Picker**: Select any specific date (e.g. `15 Oct 2026`) to view exact sessions for that day instantly.
+      - **Text Search & Subject Filters**: Instant search across chapter names, topics, and notes.
+    - **Student Frictionless UX Redesign**: Replaced disruptive full-screen submit state with an inline toast notification (`Saved! Subject - Chapter (time)`), haptic feedback (`navigator.vibrate`), 1-tap visual Subject selection cards (Biology 🧬, Physics ⚡, Chemistry 🧪), quick duration chips, and seamless multi-session logging.
+    - **All-Days Study Trend Graph & Interactive Analytics**: Added an interactive trend graph component powered by Recharts with flexible timeframes (`7 Days`, `30 Days`, `90 Days`, `All Time` for full NEET 2027 journey). Includes peak study day tracking, active day counts, daily study average metrics, and hover tooltips. Chart metrics container polished with native `glass` panels and unified warm amber palette tokens.
 
 
 

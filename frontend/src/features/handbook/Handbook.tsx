@@ -94,15 +94,16 @@ const FEATURES: FeatureConfig[] = [
   },
   {
     id: 'daily-log',
-    title: 'Daily Log',
+    title: 'Daily Log & Study Vault Studio',
     icon: CalendarDays,
     colorClass: 'text-emerald-400',
     glowClass: 'shadow-glow-emerald-sm',
-    shortDesc: 'Record your study sessions to track total hours.',
+    shortDesc: 'Log current & past study sessions, track All-Days trend graphs, and access your NEET 2027 vault archive.',
     steps: [
-      { title: 'Log Session', action: 'Enter the subject, chapter, and minutes you studied today.', stepIcon: Clock },
-      { title: 'Add Notes', action: 'Write a small note about what exactly you covered for future reference.', stepIcon: Pencil },
-      { title: 'Build Trends', action: 'Your logged hours automatically feed into the Dashboard study trend graph.', stepIcon: TrendingUp }
+      { title: '1-Tap Quick Logger', action: 'Tap a subject card (Biology 🧬, Physics ⚡, Chemistry 🧪) and select duration chips (30m to 3h) for 5-second fast logging.', stepIcon: Clock },
+      { title: 'Log Missed Past Days', action: 'Missed logging yesterday? Toggle to "Yesterday" or pick a "Custom Date" to record past study sessions anytime.', stepIcon: Calendar },
+      { title: 'All-Days Trend Graph', action: 'Switch between 7 Days, 30 Days, 90 Days, or All Time to view your complete study trend curve.', stepIcon: TrendingUp },
+      { title: 'Search & Jump Archive', action: 'Use the Search bar, Month dropdown, or Jump-to-Date picker to instantly review what you studied on any day up to NEET 2027.', stepIcon: FolderOpen }
     ]
   },
   {
