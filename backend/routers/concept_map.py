@@ -182,6 +182,63 @@ def get_concept_map(subject: Optional[str] = None, chapter_name: Optional[str] =
 
     return ConceptMapResponse(nodes=nodes, links=links)
 
+@router.get("/topic-detail")
+def get_topic_detail(topic_name: str = Query(...)):
+    """
+    Returns detailed info for a single topic: key facts, connected topics,
+    confidence status, chapter, and subject. Powers the Topic Inspector drawer.
+    """
+    client = _get_supabase()
+
+    # 1. Find topic metadata from neet_chunks
+    chunks_res = client.table("neet_chunks").select("metadata").execute()
+    topic_meta = {"subject": "Unknown", "chapter": "Unknown"}
+    for row in (chunks_res.data or []):
+        meta = row.get("metadata", {})
+        if meta.get("topic") == topic_name:
+            topic_meta = {"subject": meta.get("subject", "Unknown"), "chapter": meta.get("chapter", "Unknown")}
+            break
+
+    # 2. Fetch key facts from ncert_facts for this chapter
+    facts = []
+    try:
+        facts_res = client.table("ncert_facts").select("fact_text, fact_type").eq(
+            "chapter_name", topic_meta["chapter"]
+        ).limit(5).execute()
+        facts = [{"text": f["fact_text"], "type": f["fact_type"]} for f in (facts_res.data or [])]
+    except Exception:
+        pass
+
+    # 3. Fetch connected topics from concept_edges
+    connected = []
+    try:
+        edges_res = client.table("concept_edges").select("topic_a, topic_b, relationship_note").eq("reviewed", True).execute()
+        for edge in (edges_res.data or []):
+            if edge["topic_a"] == topic_name:
+                connected.append({"topic": edge["topic_b"], "relationship": edge["relationship_note"] or ""})
+            elif edge["topic_b"] == topic_name:
+                connected.append({"topic": edge["topic_a"], "relationship": edge["relationship_note"] or ""})
+    except Exception:
+        pass
+
+    # 4. Fetch confidence status for this chapter
+    confidence_status = "not_started"
+    try:
+        conf_res = client.table("chapter_confidence").select("status").eq("chapter_name", topic_meta["chapter"]).limit(1).execute()
+        if conf_res.data:
+            confidence_status = conf_res.data[0]["status"]
+    except Exception:
+        pass
+
+    return {
+        "topic_name": topic_name,
+        "chapter": topic_meta["chapter"],
+        "subject": topic_meta["subject"],
+        "confidence_status": confidence_status,
+        "facts": facts,
+        "connected_topics": connected,
+    }
+
 @router.get("/admin/edges")
 def get_pending_edges():
     """

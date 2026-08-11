@@ -24,7 +24,7 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
   }, [content]);
 
   return (
-    <div className={`my-6 flex flex-col overflow-hidden rounded-2xl border border-border-glass bg-surface shadow-glass-lg transition-all duration-300 ${isExpanded ? 'fixed inset-4 z-50 md:inset-10 xl:inset-20' : 'relative w-full'}`}>
+    <div className={`my-6 flex flex-col overflow-hidden rounded-2xl border border-border-glass bg-surface shadow-glass-lg transition-all duration-300 ${isExpanded ? 'fixed inset-4 z-50 md:inset-10 xl:inset-20' : 'relative w-full hover:border-violet/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]'}`}>
       
       {/* Top Bar */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-glass bg-surface-strong px-4 backdrop-blur-md">
@@ -67,13 +67,14 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
       </div>
 
       {/* Content Area */}
-      <div className={`flex-1 overflow-hidden bg-white ${isExpanded ? 'h-full' : 'h-[400px]'}`}>
+      <div className={`flex-1 overflow-hidden bg-[#08090c] ${isExpanded ? 'h-full' : 'h-[550px]'}`}>
         {mode === 'preview' ? (
           <iframe
             title={title}
             srcDoc={cleanCode}
             sandbox="allow-scripts allow-forms allow-same-origin"
-            className="h-full w-full border-none bg-white"
+            className="h-full w-full border-none bg-[#08090c]"
+            style={{ backgroundColor: '#08090c' }}
           />
         ) : (
           <div className="h-full w-full overflow-auto bg-[#0d1117] p-4 text-sm">

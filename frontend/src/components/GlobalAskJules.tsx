@@ -10,6 +10,11 @@ const preprocessMath = (text: string) => {
   if (!text) return text;
   let processed = text.replace(/\$\$(.*?)\$\$/gs, '\n```math_block\n$1\n```\n');
   processed = processed.replace(/\$((?:\\.|[^$\n])*?)\$/g, '`math_inline $1`');
+  
+  // Artifact preprocessing
+  processed = processed.replace(/```(?:html|jules-artifact)?\s*(<artifact-title>[\s\S]*?(?:<\/html>|$))\s*(?:```)?/ig, '$1');
+  processed = processed.replace(/(<artifact-title>[\s\S]*?(?:<\/html>|$))/ig, '\n```jules-artifact\n$1\n```\n');
+  
   return processed;
 };
 
@@ -177,7 +182,7 @@ export default function GlobalAskJules() {
       {/* Orb Button (Draggable) */}
       {!isOpen && (
         <div 
-          className={`fixed z-[100] flex flex-col items-end ${!position ? 'bottom-6 right-6' : ''}`}
+          className={`fixed z-[100] flex flex-col items-end ${!position ? 'bottom-24 right-6' : ''}`}
           style={position ? { left: position.x, top: position.y } : undefined}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}

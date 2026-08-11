@@ -679,8 +679,8 @@ export default function DailyLog() {
               <AreaChart data={chartData.points} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="studyTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff8a3d" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#ff8a3d" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -705,7 +705,7 @@ export default function DailyLog() {
                       return (
                         <div className="glass p-3 rounded-xl border border-border-glass shadow-glass-sm text-xs space-y-1">
                           <p className="font-semibold text-foreground">{data.fullDate}</p>
-                          <p className="text-accent font-bold">{data.hours} hrs ({data.mins} mins)</p>
+                          <p className="font-bold" style={{ color: '#8b5cf6' }}>{data.hours} hrs ({data.mins} mins)</p>
                         </div>
                       );
                     }
@@ -715,7 +715,7 @@ export default function DailyLog() {
                 <Area 
                   type="monotone" 
                   dataKey="hours" 
-                  stroke="#ff8a3d" 
+                  stroke="#8b5cf6" 
                   strokeWidth={2.5}
                   fillOpacity={1} 
                   fill="url(#studyTrendGradient)" 

@@ -201,6 +201,14 @@
       - **Text Search & Subject Filters**: Instant search across chapter names, topics, and notes.
     - **Student Frictionless UX Redesign**: Replaced disruptive full-screen submit state with an inline toast notification (`Saved! Subject - Chapter (time)`), haptic feedback (`navigator.vibrate`), 1-tap visual Subject selection cards (Biology 🧬, Physics ⚡, Chemistry 🧪), quick duration chips, and seamless multi-session logging.
     - **All-Days Study Trend Graph & Interactive Analytics**: Added an interactive trend graph component powered by Recharts with flexible timeframes (`7 Days`, `30 Days`, `90 Days`, `All Time` for full NEET 2027 journey). Includes peak study day tracking, active day counts, daily study average metrics, and hover tooltips. Chart metrics container polished with native `glass` panels and unified warm amber palette tokens.
-
+- [x] **Phase 18 (Visual Overhaul — Graphs, Charts & Diagrams) — 2026-08-11:**
+  - **ConceptMap.tsx**: Full reskin with subject-aware vibrant palettes (Biology=Emerald/Cyan, Chemistry=Amber/Gold, Physics=Violet/Rose). Replaced monotone brown nodeColors with `SUBJECT_PALETTES` map. Added live search bar with node spotlight/dimming, subject filter pills (All/Bio/Chem/Phy), canvas legend, multi-ring glowing halos for confident & weak nodes, outer ring decorations. Node click now opens TopicInspector drawer.
+  - **TopicInspector.tsx** [NEW]: Glassmorphism slide-over drawer showing topic details — chapter, subject badge, confidence status, key NCERT facts from `ncert_facts` table, connected topics list from `concept_edges`, and "Ask Jules" CTA button to jump to NCERT Chat.
+  - **concept_map.py** (backend): Added `GET /api/v1/concept-map/topic-detail` endpoint returning topic metadata, key facts, connected topics, and confidence status.
+  - **Dashboard.tsx**: AreaChart gradient changed from single amber to violet→cyan dual-tone. PieChart confidence palette upgraded to vibrant distinct colors (Emerald/Violet/Amber/Cyan/Slate). Progress ring SVG gradient updated to violet→cyan.
+  - **DailyLog.tsx**: Trend AreaChart gradient changed from amber to violet→cyan. Tooltip accent color updated.
+  - **InteractiveWidget.tsx**: Added premium "Interactive Visual" header bar with violet accent, animated gradient border during loading, shimmer loading skeleton, dark-mode iframe background (#08090c).
+  - **DiagramWithHotspots.tsx**: Hotspot markers upgraded to 28px numbered circles with animated double-ripple rings. Detail panel redesigned with gradient-to-transparent overlay, numbered badge, and glassmorphism card with close button.
+  - **ArtifactRenderer.tsx**: Iframe background changed from white to dark (#08090c). Added hover glow border effect (violet). Content area height increased to 550px.
 
 

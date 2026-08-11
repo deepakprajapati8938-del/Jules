@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera, ChevronDown, BookOpen } from 'lucide-react';
+import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera, ChevronDown, BookOpen, RefreshCw } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiClient } from '../../core/api-client';
 import type { ChatResponse } from '../../core/api-client';
@@ -20,6 +20,7 @@ interface Message {
   fallback_applied?: boolean;
   chunks?: ChatResponse['chunks'];
   isLoading?: boolean;
+  isError?: boolean;
   widget_html?: string;
   attachment?: { data: string; type: string; name: string };
 }
@@ -30,6 +31,13 @@ const preprocessMath = (text: string) => {
   let processed = text.replace(/\$\$(.*?)\$\$/gs, '\n```math_block\n$1\n```\n');
   // Convert $...$ to inline code with prefix 'math_inline '
   processed = processed.replace(/\$((?:\\.|[^$\n])*?)\$/g, '`math_inline $1`');
+  
+  // Artifact preprocessing to handle raw HTML or incorrectly wrapped HTML
+  // First, strip out any existing code block wrappers (like ```html or ```) around artifacts to avoid double-wrapping
+  processed = processed.replace(/```(?:html|jules-artifact)?\s*(<artifact-title>[\s\S]*?(?:<\/html>|$))\s*(?:```)?/ig, '$1');
+  // Now wrap the raw artifact securely in the correct jules-artifact block
+  processed = processed.replace(/(<artifact-title>[\s\S]*?(?:<\/html>|$))/ig, '\n```jules-artifact\n$1\n```\n');
+  
   return processed;
 };
 
@@ -258,9 +266,16 @@ export default function NcertChat() {
         navigate(`/chat/${response.session_id}`, { replace: true });
       }
     } catch (error) {
+      const errorMessages = [
+        "Jules is taking a quick chai break ☕ — try again in a moment!",
+        "Oops, server thoda busy hai abhi. Ek baar phir try karo!",
+        "Connection hiccup! Don't worry, ye temporary hai.",
+        "Server abhi rest le raha hai 😴 — ek minute mein wapas aayega!",
+      ];
+      const friendlyMsg = errorMessages[Math.floor(Math.random() * errorMessages.length)];
       setMessages(prev => prev.map(m => 
         m.id === loadingMsg.id 
-          ? { ...m, content: 'Error: Failed to connect to server.', isLoading: false } 
+          ? { ...m, content: friendlyMsg, isLoading: false, isError: true } 
           : m
       ));
     } finally {
@@ -431,7 +446,26 @@ export default function NcertChat() {
                         )}
 
                         <div className="text-[15px] leading-relaxed text-foreground/95 markdown-body">
-                          {msg.isLoading ? (
+                          {msg.isError ? (
+                            <div className="flex flex-col gap-3">
+                              <div className="glass rounded-2xl p-4 border border-amber-500/20 bg-amber-500/5">
+                                <p className="text-sm text-foreground/90">{msg.content}</p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const lastUserMsg = messages.filter(m => m.role === 'user').pop();
+                                  if (lastUserMsg) {
+                                    setMessages(prev => prev.filter(m => m.id !== msg.id));
+                                    setInput(lastUserMsg.content);
+                                  }
+                                }}
+                                className="self-start flex items-center gap-2 px-4 py-2 text-xs font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-xl hover:bg-violet-500/20 transition-colors active-scale"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                                Retry
+                              </button>
+                            </div>
+                          ) : msg.isLoading ? (
                             <div className="flex items-center gap-1.5 h-6 mt-1">
                               <div className="w-2 h-2 bg-accent rounded-full animate-bounce" />
                               <div className="w-2 h-2 bg-accent/70 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />

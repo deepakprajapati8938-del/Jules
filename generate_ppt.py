@@ -1,0 +1,216 @@
+import collections 
+import collections.abc
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.enum.text import PP_ALIGN
+from pptx.dml.color import RGBColor
+
+# Fix for python-pptx collections deprecation issue in python 3.10+
+collections.Sequence = collections.abc.Sequence
+
+def add_dark_background(slide):
+    background = slide.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(8, 9, 12) # #08090C
+
+def add_title(slide, text, top_inches=0.5):
+    txBox = slide.shapes.add_textbox(Inches(0.5), Inches(top_inches), Inches(9), Inches(1))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = text
+    p.font.name = 'Segoe UI'
+    p.font.size = Pt(44)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+
+def add_subtitle(slide, text, top_inches=1.5):
+    txBox = slide.shapes.add_textbox(Inches(0.5), Inches(top_inches), Inches(9), Inches(1))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = text
+    p.font.name = 'Segoe UI'
+    p.font.size = Pt(24)
+    p.font.color.rgb = RGBColor(139, 92, 246) # Violet #8b5cf6
+
+def add_bullet_points(slide, points, top_inches=2.5, left_inches=0.5):
+    txBox = slide.shapes.add_textbox(Inches(left_inches), Inches(top_inches), Inches(8), Inches(4))
+    tf = txBox.text_frame
+    for pt in points:
+        p = tf.add_paragraph()
+        p.text = pt
+        p.font.name = 'Segoe UI'
+        p.font.size = Pt(20)
+        p.font.color.rgb = RGBColor(200, 200, 200)
+        p.space_after = Pt(14)
+
+def add_image_placeholder(slide, text="[Your Screenshot Here]", top_inches=2.5, left_inches=4.5):
+    # Adds a beautiful rounded rectangle placeholder
+    from pptx.enum.shapes import MSO_SHAPE
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE, 
+        Inches(left_inches), Inches(top_inches), Inches(5), Inches(4)
+    )
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = RGBColor(20, 22, 30)
+    shape.line.color.rgb = RGBColor(139, 92, 246) # Violet border
+    shape.line.width = Pt(2)
+    
+    tf = shape.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = text
+    p.alignment = PP_ALIGN.CENTER
+    p.font.name = 'Segoe UI'
+    p.font.size = Pt(18)
+    p.font.color.rgb = RGBColor(139, 92, 246)
+
+def create_presentation():
+    prs = Presentation()
+    
+    # 1. Title Slide
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide)
+    txBox = slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(8), Inches(2))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "Jules"
+    p.font.name = 'Segoe UI'
+    p.font.size = Pt(72)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    
+    p2 = tf.add_paragraph()
+    p2.text = "The Next-Generation AI for NEET Prep"
+    p2.font.name = 'Segoe UI'
+    p2.font.size = Pt(32)
+    p2.font.color.rgb = RGBColor(139, 92, 246)
+
+    # 2. Problem
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide2)
+    add_title(slide2, "The Challenge")
+    add_subtitle(slide2, "Why traditional prep isn't enough")
+    add_bullet_points(slide2, [
+        "Massive syllabus to cover in limited time.",
+        "Lack of personalized pacing and recovery.",
+        "No real-time analytics on study habits.",
+        "High burnout and anxiety rates."
+    ], top_inches=2.5)
+
+    # 3. Dashboard & Recovery Mode
+    slide3 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide3)
+    add_title(slide3, "Smart Dashboard")
+    add_subtitle(slide3, "Empathy-driven progress tracking")
+    add_bullet_points(slide3, [
+        "Recovery Mode: Encourages rest & momentum.",
+        "Marks-Weighted Progress: See real NEET impact.",
+        "Quick Review prompts for untouched chapters.",
+        "Visually stunning dark glassmorphism UI."
+    ], top_inches=2.5, left_inches=0.5)
+    add_image_placeholder(slide3, "[Drop Dashboard Screenshots Here]", top_inches=2.0)
+
+    # 4. Daily Log & Vault
+    slide4 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide4)
+    add_title(slide4, "Daily Study Studio")
+    add_subtitle(slide4, "Track every milestone on your path")
+    add_bullet_points(slide4, [
+        "All-Days Study Trend Graph with peak tracking.",
+        "Subject Balance distribution (Bio/Phy/Chem).",
+        "Frictionless session logging with haptics.",
+        "Study Vault: Jump to any past session."
+    ], top_inches=2.5, left_inches=0.5)
+    add_image_placeholder(slide4, "[Drop Daily Log Screenshots Here]", top_inches=2.0)
+
+    # 5. Advanced Testing
+    slide5 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide5)
+    add_title(slide5, "Custom Test Engine")
+    add_subtitle(slide5, "Test exactly what you need")
+    add_bullet_points(slide5, [
+        "Full Syllabus Mocks.",
+        "Targeted Chapter-wise & Subject Mocks.",
+        "Upload PDF to Test feature.",
+        "Instantly generated by AI based on syllabus."
+    ], top_inches=2.5, left_inches=0.5)
+    add_image_placeholder(slide5, "[Drop Generate Test Screenshot Here]", top_inches=2.0)
+
+    # 6. Active Recall (Flashcards)
+    slide6 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide6)
+    add_title(slide6, "Active Recall")
+    add_subtitle(slide6, "Spaced repetition for max retention")
+    add_bullet_points(slide6, [
+        "Subject-specific categorized flashcards.",
+        "Clean, distraction-free interface.",
+        "Tap to reveal interactive mechanism.",
+        "Seamlessly integrated with your weak topics."
+    ], top_inches=2.5, left_inches=0.5)
+    add_image_placeholder(slide6, "[Drop Flashcards Screenshot Here]", top_inches=2.0)
+
+    # 7. Syllabus Tracker
+    slide7 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide7)
+    add_title(slide7, "Syllabus Tracker")
+    add_subtitle(slide7, "Know exactly where you stand")
+    add_bullet_points(slide7, [
+        "Track progress across Botany, Zoology, Physics & Chem.",
+        "Interactive accordions for chapter-level details.",
+        "Clear topic completion indicators.",
+        "Aligned with Yakeen 2.0 / NEET 2027 curriculum."
+    ], top_inches=2.5, left_inches=0.5)
+    add_image_placeholder(slide7, "[Drop Syllabus Tracker Screenshot Here]", top_inches=2.0)
+
+    # 8. Cheat Sheet Generator
+    slide8 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide8)
+    add_title(slide8, "Cheat Sheet Generator")
+    add_subtitle(slide8, "Instant quick-revision materials")
+    add_bullet_points(slide8, [
+        "Generate subject and chapter specific sheets.",
+        "Beautiful typography and layout for readability.",
+        "Covers basic definitions, formulas, and types.",
+        "Perfect for last-minute exam prep."
+    ], top_inches=2.5, left_inches=0.5)
+    add_image_placeholder(slide8, "[Drop Cheat Sheet Screenshot Here]", top_inches=2.0)
+
+    # 9. Reflection Journal
+    slide9 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide9)
+    add_title(slide9, "Reflection Journal")
+    add_subtitle(slide9, "Build a growth mindset")
+    add_bullet_points(slide9, [
+        "Track daily emotional and mental state.",
+        "Log concepts that 'finally clicked' today.",
+        "Shuffle prompts for fresh daily reflection.",
+        "Look back at your journey and insights."
+    ], top_inches=2.5, left_inches=0.5)
+    add_image_placeholder(slide9, "[Drop Reflection Journal Screenshot Here]", top_inches=2.0)
+
+    # 10. Conclusion
+    slide10 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_dark_background(slide10)
+    txBox = slide10.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(2))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    p.text = "Ready to empower your prep?"
+    p.font.name = 'Segoe UI'
+    p.font.size = Pt(48)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    
+    p2 = tf.add_paragraph()
+    p2.alignment = PP_ALIGN.CENTER
+    p2.text = "Jules is waiting."
+    p2.font.name = 'Segoe UI'
+    p2.font.size = Pt(32)
+    p2.font.color.rgb = RGBColor(139, 92, 246)
+
+    prs.save('Jules_Pitch_Deck_Complete.pptx')
+    print("Presentation created successfully as 'Jules_Pitch_Deck_Complete.pptx'")
+
+if __name__ == "__main__":
+    create_presentation()

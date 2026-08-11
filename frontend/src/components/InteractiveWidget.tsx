@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { Sparkles } from 'lucide-react';
 
 interface InteractiveWidgetProps {
   html: string;
@@ -49,18 +50,44 @@ export default function InteractiveWidget({ html }: InteractiveWidgetProps) {
   }
 
   return (
-    <div className={`mt-6 w-full rounded-2xl overflow-hidden border border-border-glass bg-surface shadow-glass-lg transition-opacity duration-300 min-h-[550px] relative`}>
+    <div className={`mt-6 w-full rounded-2xl overflow-hidden shadow-glass-lg transition-all duration-500 min-h-[550px] relative ${
+      status === 'loading'
+        ? 'border-2 border-transparent bg-surface animate-pulse'
+        : 'border border-violet/30 bg-surface'
+    }`}
+    style={status === 'loading' ? {
+      borderImage: 'linear-gradient(135deg, #8b5cf6, #06b6d4, #8b5cf6) 1',
+      animation: 'pulse 2s ease-in-out infinite',
+    } : undefined}
+    >
+      {/* Premium Header Bar */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-glass bg-surface-strong/80 backdrop-blur-md">
+        <Sparkles className="w-4 h-4 text-violet" />
+        <span className="text-xs font-bold uppercase tracking-wider text-violet">Interactive Visual</span>
+        {status === 'loading' && (
+          <div className="ml-auto flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-violet animate-ping" />
+            <span className="text-[10px] text-muted font-medium">Rendering...</span>
+          </div>
+        )}
+      </div>
+
+      {/* Loading Shimmer */}
       {status === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface/50 backdrop-blur-sm z-10">
-          <div className="w-6 h-6 border-2 border-violet border-t-transparent rounded-full animate-spin"></div>
+        <div className="absolute inset-0 top-10 flex items-center justify-center z-10 pointer-events-none">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-2 border-violet/40 border-t-violet animate-spin" />
+            <span className="text-xs text-muted font-medium tracking-wide">Loading interactive content...</span>
+          </div>
         </div>
       )}
+
       <iframe
         ref={iframeRef}
         srcDoc={html}
         title="Interactive Widget"
-        className="w-full h-[550px] border-none bg-transparent"
-        style={{ pointerEvents: 'auto' }}
+        className="w-full h-[550px] border-none"
+        style={{ pointerEvents: 'auto', backgroundColor: '#08090c' }}
       />
     </div>
   );
