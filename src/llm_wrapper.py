@@ -40,8 +40,26 @@ def _rotate_client() -> None:
 
 
 def _is_rate_limit(exc: Exception) -> bool:
+    """
+    Returns True ONLY for quota/key-specific errors where rotating to a
+    different API key might succeed.
+
+    429 / resource_exhausted / quota  → THIS key's quota is done, try next key ✓
+    403 / permission_denied           → THIS key is invalid/dead, try next key ✓
+
+    503 / unavailable / overloaded    → The MODEL itself is down globally.
+                                        Rotating keys won't help at all.
+                                        Let it raise so call_llm falls to next
+                                        model in the fallback chain instead.
+    """
     msg = str(exc).lower()
-    return "429" in msg or "resource_exhausted" in msg or "quota" in msg or "403" in msg or "permission_denied" in msg
+    return (
+        "429" in msg or
+        "resource_exhausted" in msg or
+        "quota" in msg or
+        "403" in msg or
+        "permission_denied" in msg
+    )
 
 
 # ── Public interface ──────────────────────────────────────────────────────────
@@ -95,15 +113,16 @@ def _call_single_model(
     delay = base_delay
 
     final_model = model_name
-
-    # Auto-route to Gemini if there's an attachment (Groq doesn't support multimodal)
-    if attachment_data:
-        final_model = "gemini-flash-latest"
+    
+    # Auto-route to a Gemini model if there's an attachment (Groq doesn't support multimodal)
+    if attachment_data and not final_model.startswith("gemini-"):
+        final_model = "gemini-3.6-flash"
 
     # Route to Groq if requested
     if final_model.startswith(("llama-", "mixtral-", "gemma-", "qwen", "openai/")):
         from src.config import get_groq_api_key
         from groq import Groq
+        import re as _re
         
         messages = [{"role": "system", "content": system_prompt}]
         messages.append({"role": "user", "content": full_user})
@@ -115,7 +134,10 @@ def _call_single_model(
                     messages=messages,
                     model=final_model,
                 )
-                return response.choices[0].message.content.strip()
+                raw = response.choices[0].message.content.strip()
+                # Strip <think>...</think> reasoning blocks (Qwen3, DeepSeek etc.)
+                raw = _re.sub(r'<think>.*?</think>\s*', '', raw, flags=_re.DOTALL).strip()
+                return raw
             except Exception as exc:
                 if "429" in str(exc).lower() and attempt < max_retries:
                     logger.warning(f"[llm_wrapper] Groq rate-limited (attempt {attempt}/{max_retries}). Sleeping {delay:.1f}s …")
@@ -137,6 +159,7 @@ def _call_single_model(
                 contents=contents,
                 config=config,
             )
+            _rotate_client()  # true round-robin: rotate after every successful call
             return response.text.strip()
 
         except Exception as exc:
@@ -179,11 +202,15 @@ def call_llm(
     # Determine the fallback chain
     if model_name == GEMINI_PRO_MODEL:
         chain = PRO_FALLBACK_CHAIN
-    elif model_name:
-        chain = [model_name]
     else:
-        chain = TEXT_FALLBACK_CHAIN
-        
+        # Start with the default text fallback chain
+        chain = list(TEXT_FALLBACK_CHAIN)
+        # If the user specifically requested a model, try it first
+        if model_name:
+            if model_name in chain:
+                chain.remove(model_name)
+            chain.insert(0, model_name)
+            
     last_error = None
     for model in chain:
         try:

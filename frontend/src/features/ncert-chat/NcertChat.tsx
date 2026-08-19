@@ -1,16 +1,18 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, Info, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera, ChevronDown, BookOpen, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { Send, Info, Copy, Check, Bookmark, ArrowDown, Paperclip, X, FileText, ChevronDown, BookOpen, RefreshCw, Wand2, Network, Clock } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiClient } from '../../core/api-client';
 import type { ChatResponse } from '../../core/api-client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { vibrate } from '../../core/haptics';
 import ArtifactRenderer from '../../components/ArtifactRenderer';
 import HistorySidebar from '../../components/HistorySidebar';
 import InteractiveWidget from '../../components/InteractiveWidget';
+import { useModels } from '../../core/useModels';
 
 interface Message {
   id: string;
@@ -34,9 +36,9 @@ const preprocessMath = (text: string) => {
   
   // Artifact preprocessing to handle raw HTML or incorrectly wrapped HTML
   // First, strip out any existing code block wrappers (like ```html or ```) around artifacts to avoid double-wrapping
-  processed = processed.replace(/```(?:html|jules-artifact)?\s*(<artifact-title>[\s\S]*?(?:<\/html>|$))\s*(?:```)?/ig, '$1');
+  processed = processed.replace(/```(?:html|jules-artifact)?\s*(<artifact-title>[\s\S]*?<\/html>)\s*```/ig, '$1');
   // Now wrap the raw artifact securely in the correct jules-artifact block
-  processed = processed.replace(/(<artifact-title>[\s\S]*?(?:<\/html>|$))/ig, '\n```jules-artifact\n$1\n```\n');
+  processed = processed.replace(/(<artifact-title>[\s\S]*?<\/html>)/ig, '\n```jules-artifact\n$1\n```\n');
   
   return processed;
 };
@@ -51,6 +53,40 @@ export default function NcertChat() {
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Slash Command State
+  const [showCommandMenu, setShowCommandMenu] = useState(false);
+  const [commandFilter, setCommandFilter] = useState('');
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+  const [chatMode, setChatMode] = useState<string>('normal');
+
+  const COMMANDS = [
+    { id: 'graph', icon: Network, label: 'Graph Diagram', desc: 'Concept maps & node connections', type: 'mode' },
+    { id: 'widget', icon: Wand2, label: 'Interactive Widget', desc: 'Interactive physics/chemistry models', type: 'mode' },
+    { id: 'diagram', icon: FileText, label: 'Normal Diagram', desc: 'Standard flowcharts & diagrams', type: 'mode' },
+    { id: 'history', icon: Clock, label: 'History', desc: 'View previous sessions', type: 'action' },
+    { id: 'new', icon: RefreshCw, label: 'New Topic', desc: 'Start a fresh conversation', type: 'action' },
+  ];
+
+  const filteredCommands = COMMANDS.filter(c => 
+    c.id.includes(commandFilter) || 
+    c.label.toLowerCase().includes(commandFilter)
+  );
+
+  const executeCommand = (cmdId: string) => {
+    setShowCommandMenu(false);
+    setInput('');
+    const cmd = COMMANDS.find(c => c.id === cmdId);
+    if (cmd?.type === 'mode') {
+      setChatMode(cmdId);
+    } else if (cmdId === 'history') {
+      setIsSidebarOpen(true);
+    } else if (cmdId === 'new') {
+      handleNewTopic();
+    } else if (cmdId === 'clear') {
+      setMessages([]);
+    }
+  };
 
   // Handle prefill text from Text-Select-to-Ask
   useEffect(() => {
@@ -67,7 +103,7 @@ export default function NcertChat() {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [graphMode, setGraphMode] = useState(false);
-  const [model, setModel] = useState<'gemini-flash-latest' | 'gemini-pro-latest' | 'openai/gpt-oss-120b' | 'qwen/qwen3.6-27b'>('gemini-flash-latest');
+  const [model, setModel] = useState<string>('gemini-3.7-flash');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [attachment, setAttachment] = useState<{ data: string, type: string, name: string } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -84,18 +120,11 @@ export default function NcertChat() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const MODELS = [
-    { group: 'Google (Gemini)', options: [
-      { id: 'gemini-flash-latest', label: 'Gemini Flash', sub: 'Fast & responsive' },
-      { id: 'gemini-pro-latest', label: 'Gemini Pro', sub: 'Smart & complex' },
-    ]},
-    { group: 'Smartest & Reasoning', options: [
-      { id: 'openai/gpt-oss-120b', label: 'ChatGPT', sub: 'OpenAI behemoth' },
-      { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', sub: 'Deep thinking & logic' },
-    ]}
-  ];
+  // Fetch model list from backend (single source of truth — edit src/config.py to update)
+  const { groups: modelGroups, defaultModelId } = useModels();
+  useEffect(() => { setModel(defaultModelId); }, [defaultModelId]);
+  const selectedModelObj = modelGroups.flatMap(g => g.options).find(o => o.id === model);
 
-  const selectedModelObj = MODELS.flatMap(g => g.options).find(o => o.id === model);
 
   const processImageFile = (file: File) => {
     const reader = new FileReader();
@@ -217,14 +246,25 @@ export default function NcertChat() {
     }
   }, [input]);
 
+  const MODE_PROMPTS: Record<string, string> = {
+    widget: "\n\n[INSTRUCTION: Generate an interactive HTML/JS widget/artifact to visualize this concept. Enclose the code strictly in a ```jules-artifact``` code block and include an <artifact-title> at the top of the code. The widget MUST be fully responsive and take up 100% of the viewport height (use `height: 100vh; width: 100vw; margin: 0;`). Use rich modern styling.]",
+    graph: "\n\n[INSTRUCTION: Generate a Mermaid.js mindmap or node-graph (inside a markdown block) to show how these concepts connect.]",
+    diagram: "\n\n[INSTRUCTION: Generate a Mermaid.js flowchart or standard diagram (inside a markdown block) for this process.]"
+  };
+
   const handleSend = async () => {
     if ((!input.trim() && !attachment) || isSending) return;
     vibrate(30);
     
+    let finalContent = input.trim();
+    if (chatMode !== 'normal' && MODE_PROMPTS[chatMode]) {
+      finalContent += MODE_PROMPTS[chatMode];
+    }
+    
     const userMsg: Message = { 
       id: Date.now().toString(), 
       role: 'user', 
-      content: input.trim(), 
+      content: finalContent, 
       created_at: new Date().toISOString(),
       attachment: attachment ? { ...attachment } : undefined
     };
@@ -232,6 +272,7 @@ export default function NcertChat() {
     
     setMessages(prev => [...prev, userMsg, loadingMsg]);
     setInput('');
+    setChatMode('normal');
     setIsSending(true);
     setShowScrollBottom(false);
     setTimeout(scrollToBottom, 50);
@@ -332,7 +373,7 @@ export default function NcertChat() {
 
           {isDropdownOpen && (
             <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border-glass rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 z-50">
-              {MODELS.map((group, i) => (
+              {modelGroups.map((group, i) => (
                 <div key={group.group}>
                   {i > 0 && <div className="h-px bg-border-glass my-2 mx-3" />}
                   <div className="px-4 py-1.5 text-[10px] font-bold text-muted uppercase tracking-widest">
@@ -507,6 +548,10 @@ export default function NcertChat() {
                                   if (match && match[1] === 'jules-artifact') {
                                     return <ArtifactRenderer content={content} />;
                                   }
+                                  
+                                  if (content.trim().startsWith('<artifact-title>')) {
+                                    return <ArtifactRenderer content={content} />;
+                                  }
                                   return <code className={`${className} bg-background/50 px-1.5 py-0.5 rounded text-sm`} {...props}>{children}</code>;
                                 },
                               }}
@@ -568,23 +613,40 @@ export default function NcertChat() {
 
       {/* Input Area (Floating Prompt Bar) */}
       <div className="p-4 md:p-6 shrink-0 absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-12 z-20 pointer-events-none">
-        <div className="max-w-3xl mx-auto bg-surface-strong rounded-[2rem] p-2 flex items-end gap-2 transition-all focus-within:border-accent/40 focus-within:shadow-glow-accent border border-border-glass shadow-glass-sm pointer-events-auto relative">
+        <div className="max-w-3xl mx-auto bg-[#12131a] rounded-[28px] p-2 flex items-end gap-2 transition-all focus-within:border-accent/50 border border-border-glass shadow-lg pointer-events-auto relative">
           
-          <div className="flex items-center shrink-0 mb-1 ml-0.5 md:ml-1">
+          {/* Slash Command Menu Popup */}
+          {showCommandMenu && (
+            <div className="absolute bottom-[calc(100%+12px)] left-4 min-w-[240px] bg-[#12131a] border-2 border-border-glass rounded-2xl shadow-2xl overflow-hidden flex flex-col z-[100] animate-fade-in-up">
+              {filteredCommands.length > 0 ? (
+                filteredCommands.map((cmd, idx) => (
+                  <button
+                    key={cmd.id}
+                    className={`flex items-center gap-3 px-4 py-3 text-left transition-colors ${idx === selectedCommandIndex ? 'bg-accent/15' : 'hover:bg-surface'}`}
+                    onClick={() => executeCommand(cmd.id)}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${idx === selectedCommandIndex ? 'bg-accent/20 text-accent' : 'bg-[#1a1b23] text-muted'}`}>
+                      <cmd.icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-semibold ${idx === selectedCommandIndex ? 'text-accent' : 'text-foreground'}`}>/{cmd.id}</div>
+                      <div className="text-[11px] text-muted truncate">{cmd.desc}</div>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-muted">No commands found</div>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center shrink-0 mb-0.5 ml-1">
             <button 
-              onClick={() => setIsSidebarOpen(true)}
-              title="Chat History"
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach File or Image"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
             >
-              <Clock className="w-4 h-4 md:w-[18px] md:h-[18px]" />
-            </button>
-            
-            <button 
-              onClick={handleNewTopic}
-              title="Start New Topic"
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
-            >
-              <Sparkles className="w-4 h-4 md:w-[18px] md:h-[18px]" />
+              <Paperclip className="w-5 h-5" />
             </button>
           </div>
 
@@ -596,10 +658,25 @@ export default function NcertChat() {
             onChange={handleFileChange}
           />
 
-          <div className="flex-1 min-w-0 flex flex-col justify-end min-h-[44px]">
+          <div className="flex-1 min-w-0 flex flex-col justify-center min-h-[38px]">
+            {chatMode !== 'normal' && (
+              <div className="flex items-center gap-1.5 mb-1.5 self-start bg-accent/15 border border-accent/20 rounded-md px-2 py-0.5 ml-1 transition-all mt-1">
+                <span className="text-[10px] font-bold text-accent uppercase tracking-wider">
+                  {COMMANDS.find(c => c.id === chatMode)?.label}
+                </span>
+                <button 
+                  onClick={() => setChatMode('normal')}
+                  className="text-accent/70 hover:text-accent rounded-full p-0.5 transition-colors"
+                  title="Clear Mode"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            
             {attachment && (
-              <div className="flex items-center gap-2 mb-2 p-1.5 pr-2 bg-surface border border-border-glass rounded-lg self-start max-w-full min-w-0">
-                <div className="w-10 h-10 rounded overflow-hidden shrink-0 bg-background flex items-center justify-center">
+              <div className="flex items-center gap-2 mb-2 mt-1 p-1.5 pr-2 bg-surface border border-border-glass rounded-lg self-start max-w-full min-w-0 ml-1">
+                <div className="w-10 h-10 rounded overflow-hidden shrink-0 bg-[#08090c] flex items-center justify-center">
                   {attachment.type === 'application/pdf' ? (
                     <FileText className="w-5 h-5 text-red-400" />
                   ) : (
@@ -611,66 +688,71 @@ export default function NcertChat() {
                 </span>
                 <button 
                   onClick={() => setAttachment(null)}
-                  className="w-6 h-6 rounded-full bg-surface-strong hover:bg-red-500/20 text-muted hover:text-red-400 flex items-center justify-center transition-colors shrink-0 focus:outline-none"
+                  className="w-6 h-6 rounded-full bg-[#1a1b23] hover:bg-red-500/20 text-muted hover:text-red-400 flex items-center justify-center transition-colors shrink-0 focus:outline-none"
                 >
                   <X className="w-3 h-3" />
                 </button>
               </div>
             )}
+            
             <textarea 
               ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInput(val);
+                if (val === '/' || val.startsWith('/')) {
+                  setShowCommandMenu(true);
+                  setCommandFilter(val.substring(1).toLowerCase());
+                  setSelectedCommandIndex(0);
+                } else {
+                  setShowCommandMenu(false);
+                }
+              }}
               onKeyDown={(e) => {
+                if (showCommandMenu) {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setSelectedCommandIndex(prev => (prev + 1) % (filteredCommands.length || 1));
+                    return;
+                  }
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setSelectedCommandIndex(prev => (prev - 1 + filteredCommands.length) % (filteredCommands.length || 1));
+                    return;
+                  }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (filteredCommands[selectedCommandIndex]) {
+                      executeCommand(filteredCommands[selectedCommandIndex].id);
+                    }
+                    return;
+                  }
+                  if (e.key === 'Escape') {
+                    setShowCommandMenu(false);
+                    return;
+                  }
+                }
+                
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   if (input.trim() || attachment) handleSend();
                 }
               }}
               onPaste={handlePaste}
-              placeholder={attachment ? "Message..." : "Message..."}
-              className="w-full max-h-32 resize-none bg-transparent py-3 px-2 outline-none text-[15px] text-foreground placeholder:text-muted scrollbar-hide"
+              placeholder={attachment ? "Message..." : "Message or type '/' for commands..."}
+              className="w-full max-h-32 resize-none bg-transparent py-2 px-2 outline-none text-[15px] leading-relaxed text-foreground placeholder:text-muted/60 scrollbar-hide"
               rows={1}
             />
           </div>
           
-          <div className="flex items-center shrink-0 mb-1 mr-0.5 md:mr-1">
-            <button 
-              onClick={() => setGraphMode(!graphMode)}
-              title="Toggle Graph Mode"
-              className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all focus:outline-none ${graphMode ? 'text-accent bg-accent/20 shadow-[0_0_10px_rgba(255,138,61,0.3)]' : 'text-muted hover:text-accent hover:bg-accent/10'}`}
-            >
-              <BarChart2 className="w-4 h-4 md:w-[18px] md:h-[18px]" />
-            </button>
-            <button 
-              onClick={() => cameraInputRef.current?.click()}
-              title="Take Photo"
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
-            >
-              <Camera className="w-4 h-4 md:w-[18px] md:h-[18px]" />
-            </button>
-            <input 
-              type="file" 
-              ref={cameraInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept="image/*"
-              capture="environment"
-            />
-            
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              title="Attach File"
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
-            >
-              <Paperclip className="w-4 h-4 md:w-[18px] md:h-[18px]" />
-            </button>
+          <div className="flex items-center shrink-0 mb-0.5 mr-1">
             <button 
               onClick={handleSend}
               disabled={(!input.trim() && !attachment) || isSending}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all bg-accent/10 text-accent hover:bg-accent hover:text-white disabled:opacity-30 disabled:bg-transparent disabled:text-muted focus:outline-none ml-0.5 md:ml-1"
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all focus:outline-none ${((!input.trim() && !attachment) || isSending) ? 'opacity-0 scale-90 w-0 md:w-0 overflow-hidden' : 'bg-accent/10 text-accent hover:bg-accent hover:text-white scale-100 ml-1'}`}
             >
-              <Send className="w-4 h-4 md:w-[18px] md:h-[18px] -ml-0.5" />
+              <Send className="w-4 h-4 -ml-0.5" />
             </button>
           </div>
         </div>

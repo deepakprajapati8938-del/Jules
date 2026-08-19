@@ -43,25 +43,50 @@ def get_all_gemini_api_keys() -> list[str]:
 def get_groq_api_key() -> str:
     return _require("GROQ_API_KEY")
 
-# Current non-deprecated models (as of July 2026)
-GEMINI_TEXT_MODEL: str = "gemini-flash-latest"     # text generation (confirmed working)
-GEMINI_PRO_MODEL: str = os.getenv("GEMINI_PRO_MODEL", "gemini-2.5-pro")  # heavy reasoning
-GEMINI_EMBED_MODEL: str = "gemini-embedding-2"  # embeddings
+# ── Model names ───────────────────────────────────────────────────────────────
+# UPDATE ONLY HERE — frontend fetches these via GET /api/v1/models
+#
+# LIVE-TESTED on 2026-08-19. Only verified working IDs are listed here.
+# Gemini 3.x — stable, long deprecation cycle (safe to pin version numbers)
+# Groq — llama-3.x deprecated Aug 16 2026. Use openai/* and qwen/* instead.
+GEMINI_TEXT_MODEL: str = os.getenv("GEMINI_TEXT_MODEL", "gemini-3.6-flash")       # tested OK (switched from 3.7 due to 503s)
+GEMINI_PRO_MODEL: str  = os.getenv("GEMINI_PRO_MODEL",  "gemini-3.1-pro-preview") # tested OK (quota limited)
+GEMINI_EMBED_MODEL: str = "gemini-embedding-2"
 
+# Fallback chains — tried in order on failure. All IDs below are live-tested.
 PRO_FALLBACK_CHAIN = [
-    GEMINI_PRO_MODEL,
-    "gemini-flash-latest",
-    "openai/gpt-oss-120b",
-    "qwen/qwen3.6-27b",
-    "llama-3.3-70b-versatile"
+    GEMINI_PRO_MODEL,           # gemini-3.1-pro-preview ✅
+    "gemini-3.6-flash",         # fast fallback              ✅
+    "openai/gpt-oss-120b",      # Groq heavy model          ✅
+    "openai/gpt-oss-20b",       # Groq light model          ✅
 ]
 
 TEXT_FALLBACK_CHAIN = [
-    GEMINI_TEXT_MODEL,
-    "gemini-2.5-flash-lite",
-    "openai/gpt-oss-20b",
-    "qwen/qwen3.6-27b",
-    "llama-3.1-8b-instant"
+    GEMINI_TEXT_MODEL,          # gemini-3.6-flash          ✅
+    "gemini-3.7-flash",         # try 3.7 if 3.6 fails      ✅
+    "gemini-3.5-flash-lite",    # fastest/cheapest Gemini   ✅
+    "openai/gpt-oss-20b",       # Groq last resort          ✅
+]
+
+# ── Frontend model menu — single source of truth ─────────────────────────────
+FRONTEND_MODEL_MENU = [
+    {
+        "group": "Google (Gemini)",
+        "options": [
+            {"id": "gemini-3.6-flash",       "label": "Gemini 3.6 Flash",  "sub": "Stable · recommended"},
+            {"id": "gemini-3.7-flash",       "label": "Gemini 3.7 Flash",  "sub": "Latest · currently busy"},
+            {"id": "gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro",    "sub": "Smartest · complex reasoning"},
+            {"id": "gemini-3.5-flash-lite",  "label": "Gemini 3.5 Lite",   "sub": "Fastest · ultra lightweight"},
+        ],
+    },
+    {
+        "group": "Groq (Fast Inference)",
+        "options": [
+            {"id": "openai/gpt-oss-120b",  "label": "GPT-OSS 120B",   "sub": "Heavy · Groq inference"},
+            {"id": "openai/gpt-oss-20b",   "label": "GPT-OSS 20B",    "sub": "Fast · Groq inference"},
+            {"id": "qwen/qwen3.6-27b",     "label": "Qwen 3.6 27B",   "sub": "Reasoning · Groq inference"},
+        ],
+    },
 ]
 
 # Output dimensionality (Matryoshka reduction)

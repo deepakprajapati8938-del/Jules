@@ -91,8 +91,8 @@ def chat(req: ChatRequest, sb: Client = Depends(get_supabase)):
     chunks_out = [
         ChunkOut(
             similarity=c.similarity,
-            chapter=c.metadata.get("chapter", ""),
-            topic=c.metadata.get("topic", ""),
+            chapter=c.metadata.get("chapter") or "",
+            topic=c.metadata.get("topic") or "",
             content_snippet=c.content[:300],
         )
         for c in result.chunks

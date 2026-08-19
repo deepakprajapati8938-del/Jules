@@ -210,5 +210,19 @@
   - **InteractiveWidget.tsx**: Added premium "Interactive Visual" header bar with violet accent, animated gradient border during loading, shimmer loading skeleton, dark-mode iframe background (#08090c).
   - **DiagramWithHotspots.tsx**: Hotspot markers upgraded to 28px numbered circles with animated double-ripple rings. Detail panel redesigned with gradient-to-transparent overlay, numbered badge, and glassmorphism card with close button.
   - **ArtifactRenderer.tsx**: Iframe background changed from white to dark (#08090c). Added hover glow border effect (violet). Content area height increased to 550px.
+- [x] **Phase 19 (Permanent Model Config — 2026-08-19):**
+  - `src/config.py`: Updated to Gemini 3 series (`gemini-3.7-flash` default, `gemini-3.1-pro` pro). Removed stale `qwen/qwen3.6-27b`. Added `FRONTEND_MODEL_MENU` as single source of truth.
+  - `backend/routers/models.py` [NEW]: `GET /api/v1/models` — serves model menu from config.
+  - `frontend/src/core/useModels.ts` [NEW]: Shared hook, fetches backend once with module-level cache + offline fallback.
+  - `NcertChat.tsx` + `PersonalChat.tsx`: Removed all hardcoded MODELS arrays. Now use `useModels()` hook.
+  - `preprocessMath()`: Fixed artifact regex — strict `<\/html>` match instead of greedy `|$` fallback.
+  - **Rule going forward**: To add/rename/remove a model → edit `FRONTEND_MODEL_MENU` in `src/config.py` only.
 
 
+
+- [x] **Phase 20 (Widget Layout & Chat Polish) - 2026-08-19:**
+  - src/config.py & src/llm_wrapper.py: Verified multi-key setup, fixed round-robin selection logic for real rotation on success, correct 503 fallback routing, and forced fallback chains for maximum reliability.
+  - NcertChat.tsx & PersonalChat.tsx: Removed the bloated action-icon row and consolidated tools under a single / slash command popup menu (Widget, Concept Map, Flowchart, History, New Chat) with arrow-key navigation. Fixed the "floating input bar" vertical alignment by calculating exact margins on the file paperclip and flex centering the textarea.
+  - **Prompt Injection via Frontend**: Moved widget/graph/diagram prompt instructions to the frontend MODE_PROMPTS map, injecting instructions into the user prompt string automatically before dispatching.
+  - **Artifact Parsing Fix**: Fixed the Markdown component rendering raw HTML logic by falling back to the ArtifactRenderer if content.trim().startsWith('<artifact-title>') is detected, circumventing missing markdown language block tags (jules-artifact). 
+  - InteractiveWidget.tsx & ArtifactRenderer.tsx: Fixed mobile height cut-offs and black voids! Injected a custom ResizeObserver script directly into the LLM's generated HTML srcDoc, allowing the React parent container to dynamically snap to the exact height of the AI-generated web app (constrained between 300px and 800px). No more clipped UI cards. Added sandbox="allow-scripts allow-forms allow-same-origin".

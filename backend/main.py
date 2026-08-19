@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.routers import (
-    chat, personal_chat, confidence, journal, streak, tests, suggestions, saves, dashboard, home, concept_map, daily_log, diagrams, facts, cheatsheet, syllabus_tracker
+    chat, personal_chat, confidence, journal, streak, tests, suggestions, saves, dashboard, home, concept_map, daily_log, diagrams, facts, cheatsheet, syllabus_tracker, models
 )
 
 app = FastAPI(
@@ -44,6 +44,7 @@ app.include_router(diagrams.router,      prefix=API_PREFIX)
 app.include_router(facts.router,         prefix=API_PREFIX)
 app.include_router(cheatsheet.router,    prefix=API_PREFIX)
 app.include_router(syllabus_tracker.router, prefix=API_PREFIX)
+app.include_router(models.router,           prefix=API_PREFIX)
 
 @app.get("/")
 def root():
