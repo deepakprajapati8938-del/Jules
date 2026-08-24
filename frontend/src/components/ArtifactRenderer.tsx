@@ -102,7 +102,7 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
       {/* Content Area */}
       <div 
         className={`flex-1 overflow-hidden bg-[#08090c] transition-all duration-300 ease-out`}
-        style={!isExpanded ? { height: iframeHeight ? `${Math.min(Math.max(iframeHeight, 300), 800)}px` : '500px' } : { height: '100%' }}
+        style={!isExpanded ? { height: iframeHeight ? `${Math.min(Math.max(iframeHeight, 450), 900)}px` : '500px' } : { height: '100%' }}
       >
         {mode === 'preview' ? (
           <iframe

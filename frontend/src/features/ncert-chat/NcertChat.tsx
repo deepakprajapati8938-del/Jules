@@ -637,7 +637,20 @@ export default function NcertChat() {
             </div>
           )}
 
-          <div className="flex items-center shrink-0 mb-0.5 ml-1">
+          <div className="flex items-center shrink-0 mb-0.5 ml-1 gap-0.5">
+            <button 
+              onClick={() => {
+                setInput('/');
+                setShowCommandMenu(true);
+                setCommandFilter('');
+                setSelectedCommandIndex(0);
+                setTimeout(() => textareaRef.current?.focus(), 50);
+              }}
+              title="Slash Commands"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-all text-muted hover:text-accent hover:bg-accent/10 focus:outline-none"
+            >
+              <div className="w-5 h-5 flex items-center justify-center font-bold text-sm bg-border-glass rounded border border-muted/30">/</div>
+            </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
               title="Attach File or Image"

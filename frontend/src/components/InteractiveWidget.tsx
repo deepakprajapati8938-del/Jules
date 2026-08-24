@@ -72,7 +72,7 @@ export default function InteractiveWidget({ html }: InteractiveWidgetProps) {
     );
   }
 
-  const dynamicHeight = iframeHeight ? `${Math.min(Math.max(iframeHeight, 300), 800)}px` : '500px';
+  const dynamicHeight = iframeHeight ? `${Math.min(Math.max(iframeHeight, 450), 900)}px` : '500px';
 
   return (
     <>
