@@ -170,6 +170,7 @@
   - Added Haptic Feedback (`navigator.vibrate`) for tests, flashcards, and chat sends for a premium tactile feel.
   - Added PWA Manifest Home Screen Shortcuts (NCERT Chat, Mock Test, Daily Log).
   - Prevented accidental "Pull-to-Refresh" data loss via CSS `overscroll-behavior-y`.
+  - Added missing PWA meta tags (`mobile-web-app-capable`, `apple-mobile-web-app-capable`) to `index.html` and explicit `scope`/`id` to `vite.config.ts` to fix URL bar showing in standalone mode.
 - [ ] Diagram captioning (DEFERRED) — requires paid Vision API tier. Images extracted but no captions. Will add later. Free tier quotas make batch processing impractical.
 - [x] **Vercel Deployment Fixes (2026-07-27):** Fixed 3 bugs that caused failures after Vercel/production deploy:
   - `backend/routers/tests.py`: Fixed JSONB filter operators `->` → `->>` for chapter, subject, and source_type metadata fields. The `->` operator returns raw JSON (quoted), while `->>` returns plain text — Supabase `eq` filter only matches text, so chapter-wise and subject-wise tests returned 0 questions on production.

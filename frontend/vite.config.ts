@@ -15,7 +15,10 @@ export default defineConfig({
         theme_color: '#08090c',
         background_color: '#08090c',
         display: 'standalone',
+        display_override: ['window-controls-overlay', 'standalone'],
+        scope: '/',
         start_url: '/',
+        id: '/',
         icons: [
           {
             src: 'pwa-192x192.png',
