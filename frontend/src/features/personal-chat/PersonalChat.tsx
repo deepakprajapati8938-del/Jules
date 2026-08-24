@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, HeartHandshake, ChevronDown, Copy, Check, Bookmark, ArrowDown, Sparkles, Clock, Paperclip, X, FileText, BarChart2, Camera, RefreshCw, Trash2, Wand2, Network, Scale, Smile, Lightbulb, Target } from 'lucide-react';
+import { Send, HeartHandshake, ChevronDown, Copy, Check, Bookmark, ArrowDown, Clock, Paperclip, X, FileText, RefreshCw, Wand2, Network } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../../core/api-client';
 import { vibrate } from '../../core/haptics';
@@ -49,7 +49,6 @@ export default function PersonalChat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [model, setModel] = useState<string>('gemini-3.7-flash');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [graphMode, setGraphMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -88,7 +87,6 @@ export default function PersonalChat() {
   };
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [attachment, setAttachment] = useState<{ data: string, type: string, name: string } | null>(null);
@@ -265,7 +263,7 @@ export default function PersonalChat() {
         sessionId,
         attachment?.data,
         attachment?.type,
-        graphMode
+        chatMode === 'graph'
       );
       setAttachment(null);
       setMessages(prev => prev.map(m => 

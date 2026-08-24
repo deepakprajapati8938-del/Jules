@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, Info, Copy, Check, Bookmark, ArrowDown, Paperclip, X, FileText, ChevronDown, BookOpen, RefreshCw, Wand2, Network, Clock } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiClient } from '../../core/api-client';
 import type { ChatResponse } from '../../core/api-client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { vibrate } from '../../core/haptics';
@@ -102,13 +101,11 @@ export default function NcertChat() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [graphMode, setGraphMode] = useState(false);
   const [model, setModel] = useState<string>('gemini-3.7-flash');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [attachment, setAttachment] = useState<{ data: string, type: string, name: string } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -284,7 +281,7 @@ export default function NcertChat() {
         sessionId,
         attachment?.data,
         attachment?.type,
-        graphMode
+        chatMode === 'graph'
       );
       setAttachment(null);
       
