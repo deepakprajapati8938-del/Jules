@@ -244,7 +244,7 @@ export default function NcertChat() {
   }, [input]);
 
   const MODE_PROMPTS: Record<string, string> = {
-    widget: "\n\n[INSTRUCTION: Generate an interactive HTML/JS widget/artifact to visualize this concept. Enclose the code strictly in a ```jules-artifact``` code block and include an <artifact-title> at the top of the code. The widget MUST be fully responsive and take up 100% of the viewport height (use `height: 100vh; width: 100vw; margin: 0;`). Use rich modern styling.]",
+    widget: "\n\n[INSTRUCTION: Generate an interactive HTML/JS widget/artifact to visualize this concept. Enclose the code strictly in a ```jules-artifact``` code block and include an <artifact-title> at the top. CRITICAL RULES: 1) Use standard HTML5 <canvas> and Vanilla JS (requestAnimationFrame) for physics simulations. Do NOT use p5.js or external math libraries. 2) DO NOT use 'math_inline' or 'math_block' markdown inside the HTML; use standard unicode or HTML entities (e.g., &tau;, &theta;). 3) Use Tailwind CSS (via CDN) for beautiful dark mode glassmorphism UI (Bg: #08090c, Text: white, Accents: #8b5cf6 violet). 4) Ensure the canvas is correctly appended and fully visible. Include Start/Pause/Reset controls if applicable.]",
     graph: "\n\n[INSTRUCTION: Generate a Mermaid.js mindmap or node-graph (inside a markdown block) to show how these concepts connect.]",
     diagram: "\n\n[INSTRUCTION: Generate a Mermaid.js flowchart or standard diagram (inside a markdown block) for this process.]"
   };
