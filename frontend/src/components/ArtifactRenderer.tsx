@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Code, Play, Maximize2, Minimize2, PanelTopDashed } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Code, Play, Maximize2, Minimize2, PanelTopDashed, GripHorizontal } from 'lucide-react';
 
 interface ArtifactRendererProps {
   content: string;
@@ -9,7 +9,10 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
   const [mode, setMode] = useState<'preview' | 'code'>('preview');
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const [iframeHeight, setIframeHeight] = useState<number | null>(null);
+  const [manualHeight, setManualHeight] = useState<number | null>(null);
+  const dragData = useRef({ isDragging: false, startY: 0, startHeight: 0 });
 
   // Extract title and clean code
   const { title, cleanCode, injectedCode } = useMemo(() => {
@@ -54,10 +57,53 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // Drag to resize logic
+  useEffect(() => {
+    const handleMove = (e: PointerEvent) => {
+      if (!dragData.current.isDragging) return;
+      const delta = e.clientY - dragData.current.startY;
+      setManualHeight(Math.max(300, dragData.current.startHeight + delta)); // Never less than 300px
+    };
+    
+    const handleUp = () => {
+      if (dragData.current.isDragging) {
+        dragData.current.isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
+    };
+  }, []);
+
+  const startDrag = (e: React.PointerEvent) => {
+    e.preventDefault();
+    if (isExpanded) return;
+    dragData.current.isDragging = true;
+    dragData.current.startY = e.clientY;
+    dragData.current.startHeight = containerRef.current?.getBoundingClientRect().height || 500;
+    document.body.style.cursor = 'ns-resize'; 
+    document.body.style.userSelect = 'none';
+  };
+
+  const calculatedHeight = iframeHeight ? Math.min(Math.max(iframeHeight, 450), 900) : 500;
+  const finalHeight = manualHeight !== null ? manualHeight : calculatedHeight;
+
   return (
     <>
       {isExpanded && <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm" />}
-      <div className={`my-6 flex flex-col overflow-hidden rounded-2xl border border-border-glass bg-surface shadow-glass-lg transition-all duration-300 ${isExpanded ? 'fixed inset-4 sm:inset-10 xl:inset-20 z-[101] shadow-2xl' : 'relative w-full hover:border-violet/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]'}`}>
+      <div 
+        ref={containerRef}
+        className={`my-6 flex flex-col overflow-hidden rounded-2xl border border-border-glass bg-surface shadow-glass-lg transition-all duration-300 ${isExpanded ? 'fixed inset-4 sm:inset-10 xl:inset-20 z-[101] shadow-2xl' : 'relative w-full hover:border-violet/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]'}`}
+      >
       
       {/* Top Bar */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-glass bg-surface-strong px-4 backdrop-blur-md">
@@ -101,8 +147,8 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
 
       {/* Content Area */}
       <div 
-        className={`flex-1 overflow-hidden bg-[#08090c] transition-all duration-300 ease-out`}
-        style={!isExpanded ? { height: iframeHeight ? `${Math.min(Math.max(iframeHeight, 450), 900)}px` : '500px' } : { height: '100%' }}
+        className={`flex-1 overflow-auto bg-[#08090c] transition-all duration-300 ease-out`}
+        style={!isExpanded ? { height: `${finalHeight}px` } : { height: '100%' }}
       >
         {mode === 'preview' ? (
           <iframe
@@ -110,7 +156,7 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
             srcDoc={injectedCode}
             sandbox="allow-scripts allow-forms allow-same-origin"
             className="h-full w-full border-none bg-[#08090c]"
-            style={{ backgroundColor: '#08090c' }}
+            style={{ minHeight: '100%', backgroundColor: '#08090c' }}
           />
         ) : (
           <div className="h-full w-full overflow-auto bg-[#0d1117] p-4 text-sm">
@@ -120,6 +166,17 @@ export default function ArtifactRenderer({ content }: ArtifactRendererProps) {
           </div>
         )}
       </div>
+
+      {/* Custom Drag Resize Handle */}
+      {!isExpanded && (
+        <div 
+          onPointerDown={startDrag}
+          className="h-4 w-full bg-surface shrink-0 flex items-center justify-center cursor-ns-resize border-t border-border-glass hover:bg-surface-strong transition-colors touch-none"
+          title="Drag to resize"
+        >
+          <GripHorizontal className="w-4 h-4 text-muted/50" />
+        </div>
+      )}
     </div>
     </>
   );
